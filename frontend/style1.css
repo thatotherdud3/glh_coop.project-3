@@ -5,6 +5,16 @@
    03. page styles
    04. responsive architecture */
 
+/* Shared accent: consent form blue, used sitewide. */
+:root {
+  --glh-accent: #0000ff;
+}
+
+/* Keep existing text-sage markup compatible while rendering it blue. */
+.text-sage {
+  color: var(--glh-accent) !important;
+}
+
 * {
   margin: 0;
   padding: 0;
@@ -49,11 +59,11 @@ body {
     opacity 0.2s;
 }
 
-/* sage green hover state */
+/* blue hover state */
 .system-btn:hover,
 .system-submit:hover:not(:disabled),
 .cart-submit:hover {
-  background-color: #8a9a86;
+  background-color: var(--glh-accent);
   color: #ffffff;
 }
 
@@ -66,7 +76,7 @@ body {
 
 /* blue variant used for GDPR related links */
 .blue-btn {
-  background-color: #0000ff !important;
+  background-color: var(--glh-accent) !important;
   color: #ffffff !important;
 }
 .blue-btn:hover {
@@ -140,7 +150,7 @@ body {
 /* all lines expand and change colour on hover */
 .nav-icon:hover div {
   width: 32px;
-  background-color: #8a9a86;
+  background-color: var(--glh-accent);
 }
 
 /* GLH wordmark in the centre of the nav */
@@ -209,7 +219,7 @@ body:has(.menu-checkbox:checked) {
 }
 
 .menu-link:hover {
-  color: #8a9a86;
+  color: var(--glh-accent);
 }
 
 /* the dark blurred overlay that appears behind the open menu */
@@ -284,7 +294,7 @@ body:has(.menu-checkbox:checked) {
   margin-bottom: 40px;
 }
 .text-blue {
-  color: #0000ff !important;
+  color: var(--glh-accent) !important;
 }
 .intercept-title {
   font-family: Georgia, serif;
@@ -588,14 +598,14 @@ body:has(.menu-checkbox:checked) {
     transition: background-color 0.2s ease, color 0.2s ease;
 }
 
-/* sage green on hover */
+/* blue on hover */
 .product-action:hover {
-    background-color: #8A9A86;
+    background-color: var(--glh-accent);
     color: #FBFBF9;
 }
 /* hovering anywhere on the card also triggers the button */
 .product-card:hover .product-action {
-  background-color: #8a9a86; 
+  background-color: var(--glh-accent); 
   color: #ffffff;
 }
 
@@ -952,9 +962,9 @@ body:has(.menu-checkbox:checked) {
   color: #cccccc;
   font-family: Georgia, serif;
 }
-/* active field gets a thicker sage green border */
+/* active field gets a thicker blue border */
 .auth-input:focus {
-  border-bottom: 2px solid #8a9a86;
+  border-bottom: 2px solid var(--glh-accent);
 }
 /* the link to register sits below the form */
 .auth-footer-status {
@@ -1101,9 +1111,9 @@ body:has(.menu-checkbox:checked) {
   transition: background-color 0.2s, color 0.2s;
 }
 
-/* sage green on hover */
+/* blue on hover */
 .auth-submit:hover { 
-  background-color: #8a9a86; 
+  background-color: var(--glh-accent); 
   color: #ffffff; 
 }
 
@@ -1375,9 +1385,9 @@ body:has(.menu-checkbox:checked) {
   color: #cccccc;
 }
 
-/* sage green border when the field is active */
+/* blue border when the field is active */
 .batch-input:focus {
-  border-bottom: 2px solid #8a9a86;
+  border-bottom: 2px solid var(--glh-accent);
 }
 
 /* the 3 cell results grid */
@@ -1454,7 +1464,7 @@ body:has(.menu-checkbox:checked) {
 }
 /* blue variant for GDPR related labels */
 .system-label.text-blue {
-  color: #0000ff;
+  color: var(--glh-accent);
 }
 /* red variant for warning labels */
 .system-label.text-red {
@@ -1601,9 +1611,9 @@ body:has(.menu-checkbox:checked) {
 .system-input::placeholder {
   color: #cccccc;
 }
-/* active field gets a sage green underline */
+/* active field gets a blue underline */
 .system-input:focus {
-  border-bottom: 2px solid #8a9a86;
+  border-bottom: 2px solid var(--glh-accent);
 }
 
 /* the allergen checkbox grid */
