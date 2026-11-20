@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="A practical introduction to vegetables: roots, leafy greens and cruciferous plants." />
+    <title>GLH | Plant Knowledge</title>
+    <link rel="stylesheet" href="style1.css" />
+    <link rel="stylesheet" href="plant-knowledge.css" />
+  </head>
+  <body>
+    <input type="checkbox" id="menu-toggle" class="menu-checkbox" />
+
+    <nav class="global-nav">
+      <div class="nav-left">
+        <label for="menu-toggle" class="nav-icon" aria-label="menu">
+          <div class="line-1"></div>
+          <div class="line-2"></div>
+          <div class="line-3"></div>
+        </label>
+      </div>
+      <div class="logo">
+        <a href="index.html">G L H // CO-OP</a>
+      </div>
+      <div class="nav-right">
+        <a href="cart.html" class="nav-item">CART [0]</a>
+      </div>
+    </nav>
+
+    <aside class="system-menu" id="system-menu">
+      <div class="menu-matrix">
+        <span class="system-label text-sage" style="display: block; margin-bottom: 60px">System Wayfinding</span>
+        <nav class="menu-nav">
+          <a href="index.html" class="menu-link">Home</a>
+          <a href="products.html" class="menu-link">Shop</a>
+          <a href="farmers.html" class="menu-link">Our Farmers</a>
+          <a href="producer-login.html" class="menu-link">Producer Node</a>
+          <a href="customer-login.html" class="menu-link">Customer Node</a>
+          <a href="batch-trace.html" class="menu-link">Batch Trace</a>
+          <a href="drop-nodes.html" class="menu-link">Delivery/<br />Collection</a>
+          <a href="kitchen-hub.html" class="menu-link">Kitchen Hub</a>
+          <a href="plant-knowledge.html" class="menu-link" aria-current="page">Plant Knowledge</a>
+        </nav>
+      </div>
+    </aside>
+    <label for="menu-toggle" class="menu-shield" id="menu-shield"></label>
+
+    <main class="plant-knowledge-page">
+      <header class="plant-hero">
+        <span class="plant-eyebrow">PLANT KNOWLEDGE</span>
+        <h1>Vegetable Basics</h1>
+        <p class="plant-intro">
+          No jargon, just the basics. Vegetables are the foundation of any decent diet, but you
+          don't need a biology degree to understand why. Here is a simple, informal breakdown
+          of what different plants do for your body and why you should be eating more of them.
+        </p>
+      </header>
+
+      <section class="plant-directory" aria-label="Vegetable groups">
+        <article class="plant-row">
+          <div class="plant-media">
+            <!-- Replace this src with your chosen Unsplash photo when ready. -->
+            <img src="assets/plant-roots-placeholder.svg" alt="Placeholder for a root vegetables photograph" class="plant-photo" loading="lazy" decoding="async" />
+          </div>
+          <div class="plant-copy">
+            <span class="plant-eyebrow">THE UNDERGROUND POWERHOUSES</span>
+            <h2>Root Vegetables</h2>
+            <div class="plant-divider" aria-hidden="true"></div>
+            <p>
+              Root vegetables like carrots, beets, and radishes anchor you. They absorb
+              nutrients directly from the soil, making them dense with complex carbohydrates,
+              vitamins, and minerals. They are grounding, hearty, and store well for months.
+              If you need sustained energy, this is where you start.
+            </p>
+          </div>
+        </article>
+
+        <article class="plant-row">
+          <div class="plant-media">
+            <!-- Replace this src with your chosen Unsplash photo when ready. -->
+            <img src="assets/plant-greens-placeholder.svg" alt="Placeholder for a leafy greens photograph" class="plant-photo" loading="lazy" decoding="async" />
+          </div>
+          <div class="plant-copy">
+            <span class="plant-eyebrow">THE SOLAR PANELS</span>
+            <h2>Leafy Greens</h2>
+            <div class="plant-divider" aria-hidden="true"></div>
+            <p>
+              Greens like Swiss chard, kale, and spinach are essentially edible solar panels.
+              Packed with chlorophyll, iron, and fibre, they are light on calories but heavy
+              on vitality. Eat them raw to keep their snap, or wilt them down to unlock deeper
+              flavours. You can never really eat too many of these.
+            </p>
+          </div>
+        </article>
+
+        <article class="plant-row">
+          <div class="plant-media">
+            <!-- Replace this src with your chosen Unsplash photo when ready. -->
+            <img src="assets/plant-cruciferous-placeholder.svg" alt="Placeholder for a cruciferous vegetables photograph" class="plant-photo" loading="lazy" decoding="async" />
+          </div>
+          <div class="plant-copy">
+            <span class="plant-eyebrow">THE DEFENCE MECHANISM</span>
+            <h2>Cruciferous</h2>
+            <div class="plant-divider" aria-hidden="true"></div>
+            <p>
+              Broccoli, cabbage, cauliflower, and Brussels sprouts belong to the cruciferous
+              family. They bring fibre, vitamin C, and plenty of texture to the table. Roast
+              them for crisp edges, steam them until just tender, or add them raw to salads
+              for extra crunch.
+            </p>
+          </div>
+        </article>
+      </section>
+    </main>
+
+    <footer class="massive-footer">
+      <div class="footer-content">
+        <h2>TRACEABLE.<br />LOCAL.<br />VERIFIED.</h2>
+      </div>
+    </footer>
+    <script src="app.js"></script>
+  </body>
+</html>

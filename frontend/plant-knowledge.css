@@ -1,0 +1,164 @@
+/* Plant Knowledge: scoped styling matching the editorial Figma reference. */
+.plant-knowledge-page {
+  background-color: #fbfbf9;
+}
+
+.plant-hero {
+  min-height: 465px;
+  padding: 98px 5% 94px;
+  border-bottom: 1px solid #111111;
+}
+
+.plant-eyebrow {
+  display: block;
+  color: #999999;
+  font-family: Helvetica, Arial, sans-serif;
+  font-weight: 700;
+  font-size: 10px;
+  letter-spacing: 2px;
+  line-height: 1.5;
+}
+
+.plant-hero h1 {
+  margin: 25px 0 25px;
+  font-family: Didot, "Bodoni MT", Georgia, serif;
+  font-weight: normal;
+  font-size: clamp(67px, 9.1vw, 142px);
+  letter-spacing: -0.045em;
+  line-height: 0.99;
+}
+
+.plant-intro {
+  max-width: 700px;
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: clamp(15px, 1.12vw, 17px);
+  line-height: 1.55;
+  color: #333333;
+}
+
+.plant-directory {
+  display: block;
+}
+
+.plant-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+  min-height: 390px;
+  border-bottom: 1px solid #111111;
+}
+
+.plant-row:last-child {
+  border-bottom: 0;
+}
+
+.plant-media {
+  position: relative;
+  min-width: 0;
+  min-height: 390px;
+  overflow: hidden;
+  background-color: #e6e6e6;
+  border-right: 1px solid #111111;
+}
+
+.plant-photo {
+  display: block;
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  inset: 0;
+  object-fit: cover;
+  filter: grayscale(100%);
+}
+
+.plant-copy {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+  padding: 68px 7.5%;
+}
+
+.plant-copy h2 {
+  margin: 22px 0 21px;
+  font-family: Didot, "Bodoni MT", Georgia, serif;
+  font-size: clamp(43px, 4.1vw, 66px);
+  font-weight: normal;
+  line-height: 1.08;
+  letter-spacing: -0.025em;
+}
+
+.plant-divider {
+  width: 100%;
+  border-top: 1px solid #111111;
+  margin: 0 0 27px;
+}
+
+.plant-copy p {
+  max-width: 860px;
+  color: #222222;
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: clamp(15px, 1.09vw, 17px);
+  line-height: 1.52;
+}
+
+@media (max-width: 1024px) {
+  .plant-hero {
+    min-height: 0;
+    padding: 85px 5% 80px;
+  }
+
+  .plant-row {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.45fr);
+  }
+
+  .plant-media {
+    min-height: 400px;
+  }
+
+  .plant-copy {
+    padding: 55px 8%;
+  }
+
+  .plant-copy h2 {
+    font-size: clamp(39px, 5vw, 56px);
+  }
+}
+
+@media (max-width: 650px) {
+  .plant-hero {
+    padding: 70px 24px 65px;
+  }
+
+  .plant-hero h1 {
+    font-size: clamp(55px, 12vw, 85px);
+    letter-spacing: -0.035em;
+  }
+
+  .plant-intro {
+    font-size: 15px;
+  }
+
+  .plant-row {
+    grid-template-columns: 1fr;
+    min-height: 0;
+  }
+
+  .plant-media {
+    height: min(75vw, 390px);
+    min-height: 250px;
+    border-right: 0;
+    border-bottom: 1px solid #111111;
+  }
+
+  .plant-copy {
+    padding: 50px 24px 55px;
+  }
+
+  .plant-copy h2 {
+    font-size: clamp(42px, 10vw, 58px);
+  }
+
+  .plant-copy p {
+    font-size: 15px;
+  }
+}

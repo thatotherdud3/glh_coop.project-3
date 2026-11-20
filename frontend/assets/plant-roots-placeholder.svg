@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 620" role="img" aria-labelledby="placeholder-title">
+  <title id="placeholder-title">ROOT VEGETABLES image placeholder</title>
+  <defs>
+    <linearGradient id="back" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#e4e4e4"/>
+      <stop offset="1" stop-color="#c7c7c7"/>
+    </linearGradient>
+    <pattern id="lines" width="16" height="16" patternUnits="userSpaceOnUse" patternTransform="rotate(35)">
+      <path d="M0 0 V16" stroke="#b7b7b7" stroke-width="1" opacity=".42"/>
+    </pattern>
+  </defs>
+  <rect width="760" height="620" fill="url(#back)"/>
+  <rect width="760" height="620" fill="url(#lines)"/>
+  <path d="M0 438 C 170 385, 310 500, 470 445 S 700 410, 760 465 V620 H0 Z" fill="#bcbcbc" opacity=".4"/>
+  <rect x="48" y="50" width="664" height="520" fill="none" stroke="#9b9b9b" stroke-width="1.5"/>
+  <circle cx="380" cy="264" r="69" fill="none" stroke="#999999" stroke-width="4"/>
+  <path d="M343 283l26-29 24 19 28-41" stroke="#999999" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="380" y="389" text-anchor="middle" fill="#505050" font-family="Arial, Helvetica, sans-serif" font-size="19" letter-spacing="4">IMAGE PLACEHOLDER</text>
+  <text x="380" y="424" text-anchor="middle" fill="#666666" font-family="Arial, Helvetica, sans-serif" font-size="14" letter-spacing="2">ROOT VEGETABLES</text>
+  <text x="380" y="536" text-anchor="middle" fill="#888888" font-family="Arial, Helvetica, sans-serif" font-size="12" letter-spacing="3">GLH / PLANT STUDIES / 01</text>
+</svg>
