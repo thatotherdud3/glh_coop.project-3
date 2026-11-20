@@ -1874,27 +1874,31 @@ body:has(.menu-checkbox:checked) {
   .metric-box:last-child {
     border-bottom: none;
   }
-}
+
 
   /* tablet: kitchen hub collapses to single column with image on top */
- .recipe-row {
-    grid-template-columns: 1fr !important;
+  .recipe-row {
+    grid-template-columns: 1fr;
   }
+
   .recipe-row:nth-child(even) .recipe-media,
   .recipe-row:nth-child(odd) .recipe-media {
-    order: 1 !important;
+    order: 1;
     border-bottom: 1px solid #111111;
     min-height: 400px;
   }
+
   .recipe-row:nth-child(even) .recipe-info,
   .recipe-row:nth-child(odd) .recipe-info {
-    order: 2 !important;
+    order: 2;
     padding: 60px 20px;
   }
+
   .recipe-data {
     grid-template-columns: 1fr;
     gap: 60px;
   }
+}
 
 
 /* mobile font size overrides */
