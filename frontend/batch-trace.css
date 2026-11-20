@@ -1,0 +1,207 @@
+/* Scoped Batch Trace layout, based on the Figma compliance-ledger reference. */
+.trace-page {
+  min-height: 80vh;
+  padding-bottom: 90px;
+  background: #fbfbf9;
+}
+
+.trace-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.trace-search {
+  padding: 55px 5% 100px;
+  min-height: 525px;
+}
+
+.trace-eyebrow {
+  color: #999;
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 2px;
+}
+
+.trace-form {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-width: 920px;
+  margin: -20px auto 0;
+}
+
+.trace-input {
+  display: block;
+  width: 100%;
+  height: 175px;
+  padding: 20px 0 30px;
+  appearance: none;
+  border: 0;
+  border-bottom: 4px solid var(--glh-accent, #0000ff);
+  border-radius: 0;
+  outline: 0;
+  background: transparent;
+  color: #111;
+  font-family: Didot, "Bodoni MT", Georgia, serif;
+  font-size: clamp(56px, 8.3vw, 130px);
+  font-weight: 400;
+  letter-spacing: -.045em;
+  line-height: 1;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.trace-input::placeholder {
+  color: #e3e3e3;
+  opacity: 1;
+}
+
+.trace-search-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 20px;
+  margin-top: 70px;
+  padding: 16px 30px;
+  border: 1px solid #111;
+  background: transparent;
+  color: #111;
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  cursor: pointer;
+}
+
+.trace-search-btn:hover,
+.trace-search-btn:focus-visible {
+  color: #fff;
+  border-color: var(--glh-accent, #0000ff);
+  background: var(--glh-accent, #0000ff);
+}
+
+.trace-search-btn:disabled {
+  opacity: .6;
+  cursor: wait;
+}
+
+.trace-status {
+  max-width: 920px;
+  min-height: 20px;
+  margin: 25px auto 0;
+  color: #444;
+  font-size: 13px;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.trace-status.is-error {
+  color: #ae2222;
+}
+
+.trace-results[hidden] {
+  display: none;
+}
+
+.trace-results {
+  scroll-margin-top: 85px;
+  border-top: 1px solid #111;
+}
+
+.trace-results-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  gap: 30px;
+  padding: 65px 5% 55px;
+}
+
+.trace-results-heading h2 {
+  margin-top: 17px;
+  font-family: Didot, "Bodoni MT", Georgia, serif;
+  font-size: clamp(48px, 5.8vw, 88px);
+  font-weight: 400;
+  line-height: 1;
+}
+
+.trace-identification {
+  font-family: "Courier New", monospace;
+  font-size: 12px;
+  letter-spacing: 1px;
+  line-height: 1.8;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.trace-identification span,
+.trace-identification strong {
+  display: block;
+}
+
+.trace-result-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border-top: 1px solid #111;
+  border-bottom: 1px solid #111;
+}
+
+.trace-result-cell {
+  display: flex;
+  flex-direction: column;
+  min-height: 230px;
+  padding: 48px 11%;
+  border-right: 1px solid #111;
+}
+
+.trace-result-cell:last-child {
+  border-right: none;
+}
+
+.trace-result-label {
+  color: #666;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.4px;
+}
+
+.trace-result-value {
+  margin-top: 30px;
+  font-family: Didot, "Bodoni MT", Georgia, serif;
+  font-size: clamp(28px, 3vw, 45px);
+  font-weight: 400;
+  line-height: 1.07;
+  overflow-wrap: anywhere;
+}
+
+.trace-result-note {
+  margin-top: 18px;
+  color: #666;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+@media (max-width: 1024px) {
+  .trace-form { margin-top: 26px; }
+  .trace-input { height: 140px; font-size: clamp(53px, 9vw, 92px); }
+  .trace-result-cell { padding: 36px 9%; }
+}
+
+@media (max-width: 650px) {
+  .trace-search { padding: 55px 24px 80px; min-height: 410px; }
+  .trace-form { margin-top: 40px; }
+  .trace-input { height: 105px; padding-bottom: 18px; font-size: clamp(36px, 9vw, 64px); border-bottom-width: 3px; }
+  .trace-search-btn { margin-top: 55px; }
+  .trace-results-heading { flex-direction: column; align-items: start; padding: 48px 24px 38px; }
+  .trace-identification { text-align: left; }
+  .trace-result-grid { grid-template-columns: 1fr; }
+  .trace-result-cell { min-height: 0; padding: 38px 24px; border-right: 0; border-bottom: 1px solid #111; }
+  .trace-result-cell:last-child { border-bottom: 0; }
+  .trace-result-value { margin-top: 22px; }
+}
