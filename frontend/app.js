@@ -92,6 +92,22 @@ function distributeData(inventory) {
 
 /* shop produce node */
 
+// Correct image extensions used by older database seed versions.
+const LEGACY_PRODUCT_IMAGE_NAMES = Object.freeze({
+  "basil.png": "basil.jpg",
+  "tarragon.png": "tarragon.jpeg",
+  "hen ow.png": "hen ow.jpeg",
+  "amber honey.png": "amber honey.jpg",
+});
+
+function resolveProductImageUrl(imageName) {
+  // Paths are relative to the frontend page; always use the assets directory.
+  const supplied = String(imageName || "placeholder.png").trim();
+  const basename = supplied.split(/[\\/]/).pop() || "placeholder.png";
+  const filename = LEGACY_PRODUCT_IMAGE_NAMES[basename.toLowerCase()] || basename;
+  return "assets/" + encodeURIComponent(filename);
+}
+
 function populateShop(inventory, container) {
   container.innerHTML = "";
 
@@ -99,11 +115,8 @@ function populateShop(inventory, container) {
     const card = document.createElement("div");
     card.className = "product-card";
 
-    // uses a placeholder image if the product doesnt have one yet
-    let imagePath = "placeholder.png";
-    if (item.product_image && item.product_image !== "placeholder.png") {
-      imagePath = `assets/${item.product_image}`;
-    }
+    // Resolve legacy .png filenames and safely encode spaces for the browser.
+    const imagePath = resolveProductImageUrl(item.product_image);
 
     // works out the stock status for the badge and button text
     let status = "IN STOCK";
@@ -131,6 +144,7 @@ function populateShop(inventory, container) {
             class="product-image"
             src="${imagePath}"
             alt="${item.product_name}"
+            loading="lazy"
             style="width: 100%; height: 100%; object-fit: cover; display: block; background-color: #e0e0e0;"
           />
         </div>
@@ -151,6 +165,17 @@ function populateShop(inventory, container) {
           <span class="action-icon">${actionIcon}</span>
         </button>
     `;
+
+    const productImage = card.querySelector(".product-image");
+    if (productImage) {
+      productImage.addEventListener("error", function () {
+        const fallback = "assets/placeholder.png";
+        if (!this.src.endsWith("/" + fallback)) {
+          console.warn("Product image not found:", this.getAttribute("src"));
+          this.src = fallback;
+        }
+      });
+    }
 
     container.appendChild(card);
   });

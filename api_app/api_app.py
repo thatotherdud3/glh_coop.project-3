@@ -9,8 +9,18 @@ from http.server import SimpleHTTPRequestHandler, HTTPServer
 from email.parser import BytesParser
 
 PORT = 8000
-FRONTEND_DIR = "frontend"
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+FRONTEND_DIR = os.path.join(PROJECT_ROOT, "frontend")
 ASSET_DIR = os.path.join(FRONTEND_DIR, "assets")
+
+# Earlier database seeds stored PNG names for files uploaded as JPG/JPEG.
+# Only fix these exact old references; do not overwrite newer product images.
+LEGACY_PRODUCT_IMAGES = (
+    ("ER-26-B3", "basil.png", "basil.jpg"),
+    ("ER-26-B4", "tarragon.png", "tarragon.jpeg"),
+    ("DM-26-C2", "hen ow.png", "hen ow.jpeg"),
+    ("AP-26-E4", "amber honey.png", "amber honey.jpg"),
+)
 
 # creates the assets folder if it doesnt already exist
 if not os.path.exists(ASSET_DIR):
@@ -49,6 +59,16 @@ def get_db_connection():
             conn.execute("ALTER TABLE products ADD COLUMN harvest_date TEXT")
         if "safety_clearance" not in columns:
             conn.execute("ALTER TABLE products ADD COLUMN safety_clearance TEXT")
+
+    # Safe, idempotent image data migration. No reseeding or deleted records.
+    if "product_image" in columns:
+        for batch, old_name, new_name in LEGACY_PRODUCT_IMAGES:
+            if os.path.isfile(os.path.join(ASSET_DIR, new_name)):
+                conn.execute(
+                    "UPDATE products SET product_image = ? "
+                    "WHERE batch_number = ? AND product_image = ?",
+                    (new_name, batch, old_name),
+                )
 
     conn.commit()
     return conn
