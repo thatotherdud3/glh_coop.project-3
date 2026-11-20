@@ -439,13 +439,19 @@ body:has(.menu-checkbox:checked) {
   font-size: 14px;
   opacity: 0.5;
 }
-/* the large serif title inside each grid box */
-.box-title {
+/* Figma-style oversized serif titles, scoped to homepage navigation */
+.portal-grid .box-title {
   font-family: Georgia, serif;
   font-weight: normal;
-  font-size: clamp(32px, 4vw, 48px);
-  line-height: 1.1;
+  font-size: clamp(44px, 5vw, 76px);
+  line-height: 1.05;
   word-wrap: break-word;
+}
+
+/* Italic titles on hover and keyboard focus */
+.grid-box:hover .box-title,
+.grid-box:focus-visible .box-title {
+  font-style: italic;
 }
 
 
