@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>GLH | Collective Sourcing</title>
+    <link rel="stylesheet" href="style1.css" />
+  </head>
+  <body>
+    <div class="intercept-overlay" id="consent-intercept">
+      <div class="intercept-modal">
+        <div class="intercept-header">
+          <span class="system-label text-blue"
+            >[GREENFIELD_DATA_PROTOCOL_]</span
+          >
+          <h2 class="intercept-title">We Value Your Privacy</h2>
+        </div>
+
+        <div class="intercept-body">
+          <p>
+            Greenfield Local Hub (GLH) and our trusted partners use cookies and
+            collect personal data strictly for processing e-commerce orders,
+            managing the loyalty scheme, and analysing historical booking trends
+            to improve our cooperative.
+          </p>
+          <p>
+            Please opt-in to the processing operations you consent to below.
+            This consent request is completely separate from our general Terms
+            and Conditions. You may easily withdraw or change your consent at
+            any time by visiting your Account Settings.
+          </p>
+        </div>
+
+        <form class="intercept-form" id="consent-form">
+          <div class="consent-options">
+            <label class="allergen-checkbox">
+              <input
+                type="checkbox"
+                name="strictly-necessary"
+                required
+                checked
+                disabled
+              />
+              <span class="custom-box"></span>
+              STRICTLY NECESSARY: REQUIRED FOR ACTIVE CART AND SECURE LOGINS.
+            </label>
+
+            <label class="allergen-checkbox">
+              <input type="checkbox" name="analytics" id="consent-analytics" />
+              <span class="custom-box"></span>
+              ANALYTICS & PERFORMANCE: HISTORICAL TRENDS AND RETENTION DATA.
+            </label>
+
+            <label class="allergen-checkbox">
+              <input type="checkbox" name="marketing" id="consent-marketing" />
+              <span class="custom-box"></span>
+              MARKETING & LOYALTY: USED TO MANAGE DISCOUNTS AND SCHEMES.
+            </label>
+          </div>
+
+          <div class="intercept-actions">
+            <button type="submit" class="system-btn ghost-btn">
+              ACCEPT SELECTED
+            </button>
+            <button
+              type="button"
+              class="system-btn blue-btn"
+              id="accept-all-btn"
+            >
+              ACCEPT ALL
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <input type="checkbox" id="menu-toggle" class="menu-checkbox" />
+
+    <nav class="global-nav">
+      <div class="nav-left">
+        <label for="menu-toggle" class="nav-icon" aria-label="menu">
+          <div class="line-1"></div>
+          <div class="line-2"></div>
+          <div class="line-3"></div>
+        </label>
+      </div>
+      <div class="logo">
+        <a href="index.html">G L H // CO-OP</a>
+      </div>
+      <div class="nav-right">
+        <a href="cart.html" class="nav-item">CART [0]</a>
+      </div>
+    </nav>
+    <aside class="system-menu" id="system-menu">
+      <div class="menu-matrix">
+        <span
+          class="system-label text-sage"
+          style="display: block; margin-bottom: 60px"
+          >System Wayfinding</span
+        >
+        <nav class="menu-nav">
+          <a href="products.html" class="menu-link">Shop</a>
+          <a href="farmers.html" class="menu-link">Our Farmers</a>
+          <a href="producer-login.html" class="menu-link">Producer Node</a>
+          <a href="customer-login.html" class="menu-link">Customer Node</a>
+          <a href="batch-trace.html" class="menu-link">Batch Trace</a>
+          <a href="#" class="menu-link">Delivery/<br />Collection</a>
+          <a href="kitchen-hub.html" class="menu-link">Kitchen Hub</a>
+          <a href="#" class="menu-link">Plant Knowledge</a>
+        </nav>
+      </div>
+    </aside>
+
+    <label for="menu-toggle" class="menu-shield" id="menu-shield"></label>
+
+    <header class="hero-section">
+      <h1>Collective Sourcing</h1>
+    </header>
+
+    <img class="hero-image-container" src="assets/home.jpg" />
+
+    <section class="intro-section">
+      <h2>ABOUT US</h2>
+      <p>
+        A streamlined cooperative network designed to optimize the allocation of
+        local agricultural assets. We bridge the gap between primary producers
+        and end-consumer demand through rigorous traceability and direct to
+        market logistics.
+      </p>
+    </section>
+
+    <main class="portal-grid">
+      <a href="products.html" class="grid-box">
+        <span class="box-index">01</span>
+        <h2 class="box-title">Shop<br />Produce</h2>
+      </a>
+      <a href="farmers.html" class="grid-box">
+        <span class="box-index">02</span>
+        <h2 class="box-title">Our<br />Farmers</h2>
+      </a>
+      <a href="batch-trace.html" class="grid-box">
+        <span class="box-index">03</span>
+        <h2 class="box-title">Batch<br />Trace</h2>
+      </a>
+      <a href="#" class="grid-box">
+        <span class="box-index">04</span>
+        <h2 class="box-title">Plant<br />Knowledge</h2>
+      </a>
+      <a href="kitchen-hub.html" class="grid-box">
+        <span class="box-index">05</span>
+        <h2 class="box-title">Kitchen<br />Hub</h2>
+      </a>
+      <a href="#" class="grid-box">
+        <span class="box-index">06</span>
+        <h2 class="box-title">Delivery /<br />Collection</h2>
+      </a>
+      <a href="customer-login.html" class="grid-box">
+        <span class="box-index">07</span>
+        <h2 class="box-title">Customer<br />Login</h2>
+      </a>
+      <a href="producer-login.html" class="grid-box">
+        <span class="box-index">08</span>
+        <h2 class="box-title">Producer<br />Login</h2>
+      </a>
+    </main>
+
+    <footer class="massive-footer">
+      <div class="footer-content">
+        <h2>TRACEABLE.<br />LOCAL.<br />VERIFIED.</h2>
+      </div>
+    </footer>
+    <script src="app.js"></script>
+  </body>
+</html>

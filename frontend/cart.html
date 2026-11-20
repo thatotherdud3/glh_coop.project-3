@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>GLH | Active Cart</title>
+    <link rel="stylesheet" href="style1.css" />
+  </head>
+  <body>
+    <input type="checkbox" id="menu-toggle" class="menu-checkbox" />
+
+    <nav class="global-nav">
+      <div class="nav-left">
+        <label for="menu-toggle" class="nav-icon" aria-label="menu">
+          <div class="line-1"></div>
+          <div class="line-2"></div>
+          <div class="line-3"></div>
+        </label>
+      </div>
+      <div class="logo">
+        <a href="index.html">G L H // CO-OP</a>
+      </div>
+      <div class="nav-right">
+        <a href="cart.html" class="nav-item">CART [0]</a>
+      </div>
+    </nav>
+
+    <aside class="system-menu" id="system-menu">
+      <div class="menu-matrix">
+        <span
+          class="system-label text-sage"
+          style="display: block; margin-bottom: 60px"
+          >System Wayfinding</span
+        >
+        <nav class="menu-nav">
+          <a href="index.html" class="menu-link">Home</a>
+          <a href="products.html" class="menu-link">Shop</a>
+          <a href="farmers.html" class="menu-link">Our Farmers</a>
+          <a href="producer-login.html" class="menu-link">Producer Node</a>
+          <a href="customer-login.html" class="menu-link">Customer Node</a>
+          <a href="batch-trace.html" class="menu-link">Batch Trace</a>
+          <a href="#" class="menu-link">Delivery/<br />Collection</a>
+          <a href="kitchen-hub.html" class="menu-link">Kitchen Hub</a>
+          <a href="#" class="menu-link">Plant Knowledge</a>
+        </nav>
+      </div>
+    </aside>
+
+    <label for="menu-toggle" class="menu-shield" id="menu-shield"></label>
+
+    <main class="cart-container">
+      <header class="cart-header">
+        <h1 class="cart-title">ACTIVE CART</h1>
+      </header>
+
+      <div class="cart-grid">
+        <section class="cart-items">
+        </section>
+
+        <aside class="order-summary">
+          <h2 class="summary-heading">ORDER SUMMARY</h2>
+
+          <div class="delivery-options">
+            <label class="delivery-toggle">
+              <input
+                type="radio"
+                name="delivery-method"
+                value="hub"
+                class="allergen-check"
+                checked
+              />
+              HUB COLLECTION
+            </label>
+
+            <label class="delivery-toggle">
+              <input
+                type="radio"
+                name="delivery-method"
+                value="direct"
+                class="allergen-check"
+              />
+              DIRECT DELIVERY
+            </label>
+          </div>
+
+          <table class="summary-totals">
+            <tbody>
+              <tr>
+                <td>SUBTOTAL</td>
+                <td class="numeric">£ 0.00</td>
+              </tr>
+              <tr>
+                <td>VAT</td>
+                <td class="numeric">£ 0.00</td>
+              </tr>
+              <tr>
+                <td>DELIVERY</td>
+                <td class="numeric">£ 0.00</td>
+              </tr>
+              <tr class="grand-total">
+                <td>TOTAL</td>
+                <td class="numeric">£ 0.00</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <button type="submit" class="cart-submit">SUBMIT ORDER</button>
+        </aside>
+      </div>
+    </main>
+
+    <footer class="massive-footer">
+      <div class="footer-content">
+        <h2>TRACEABLE.<br />LOCAL.<br />VERIFIED.</h2>
+      </div>
+    </footer>
+    <script src="app.js"></script>
+  </body>
+</html>

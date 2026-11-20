@@ -1,0 +1,289 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Producer Terminal // GLH CO-OP</title>
+    <link rel="stylesheet" href="style1.css" />
+  </head>
+  <body>
+    <input type="checkbox" id="menu-toggle" class="menu-checkbox" />
+
+    <nav class="global-nav">
+      <div class="nav-left">
+        <label for="menu-toggle" class="nav-icon" aria-label="menu">
+          <div class="line-1"></div>
+          <div class="line-2"></div>
+          <div class="line-3"></div>
+        </label>
+      </div>
+      <div class="logo">
+        <a href="index.html">G L H // CO-OP</a>
+      </div>
+      <div class="nav-right">
+        <a href="cart.html" class="nav-item">CART [0]</a>
+      </div>
+    </nav>
+    <aside class="system-menu" id="system-menu">
+      <div class="menu-matrix">
+        <span
+          class="system-label text-sage"
+          style="display: block; margin-bottom: 60px"
+          >System Wayfinding</span
+        >
+        <nav class="menu-nav">
+          <a href="index.html" class="menu-link">Home</a>
+          <a href="products.html" class="menu-link">Shop</a>
+          <a href="farmers.html" class="menu-link">Our Farmers</a>
+          <a href="customer-login.html" class="menu-link">Customer Node</a>
+          <a href="batch-trace.html" class="menu-link">Batch Trace</a>
+          <a href="#" class="menu-link">Delivery/<br />Collection</a>
+          <a href="kitchen-hub.html" class="menu-link">Kitchen Hub</a>
+          <a href="#" class="menu-link">Plant Knowledge</a>
+        </nav>
+      </div>
+    </aside>
+
+    <label for="menu-toggle" class="menu-shield" id="menu-shield"></label>
+
+    <main class="dashboard-terminal">
+      <header class="producer-header">
+        <div class="producer-id">
+          PRODUCER: <span id="active-farmer-name">---</span>
+        </div>
+      </header>
+
+      <section class="metrics-grid">
+        <div class="metric-box">
+          <span class="metric-label">Revenue MTD</span>
+          <div class="metric-value">£---</div>
+        </div>
+        <div class="metric-box">
+          <span class="metric-label">Active Stock</span>
+          <div class="metric-value">-- Units</div>
+        </div>
+        <div class="metric-box">
+          <span class="metric-label">Pending Fulfillment</span>
+          <div class="metric-value">-- Orders</div>
+        </div>
+      </section>
+
+      <form class="manifest-grid" id="ledger-form">
+        <div class="manifest-panel form-panel">
+          <span class="system-label text-blue">Intake Manifest</span>
+          <h2 class="panel-title">Stock Registration.</h2>
+
+          <div class="intake-form">
+            <div class="input-row">
+              <label class="input-label">Batch Number (Required)</label>
+              <input
+                type="text"
+                class="system-input required-input"
+                placeholder="e.g. BATCH-2026-X1"
+                required
+              />
+            </div>
+
+            <div class="input-row">
+              <label class="input-label">Product Name</label>
+              <input
+                type="text"
+                class="system-input required-input"
+                placeholder="Product Descriptor"
+                required
+              />
+            </div>
+
+            <div class="input-row">
+              <label class="input-label">Unit Price (£)</label>
+              <input
+                type="number"
+                step="0.01"
+                class="system-input required-input"
+                placeholder="0.00"
+                id="input-price"
+                required
+              />
+            </div>
+
+            <div class="input-group-split">
+              <div class="input-row">
+                <label class="input-label">Volume/Qty</label>
+                <input
+                  type="number"
+                  class="system-input required-input"
+                  placeholder="0.00"
+                  id="input-stock"
+                  required
+                />
+              </div>
+              <div class="input-row">
+                <label class="input-label">Unit</label>
+                <input
+                  type="text"
+                  class="system-input required-input"
+                  value="lbs"
+                  required
+                />
+              </div>
+            </div>
+
+            <div class="input-row" style="margin-bottom: 60px">
+              <label class="input-label">VISUAL ASSET (PNG/JPG)</label>
+              <input
+                type="file"
+                id="input-image"
+                accept="image/*"
+                style="
+                  font-family: &quot;Courier New&quot;, Courier, monospace;
+                  font-size: 12px;
+                  margin-top: 10px;
+                "
+              />
+            </div>
+
+            <button
+              type="submit"
+              class="system-submit"
+              id="commit-btn"
+              style="width: 100%; padding: 24px; font-size: 14px"
+            >
+              Commit to Ledger
+            </button>
+          </div>
+        </div>
+
+        <div class="manifest-panel allergen-panel">
+          <span class="system-label text-red">Mandatory Declaration</span>
+          <h2 class="panel-title">Allergen Profile.</h2>
+          <p class="panel-disclaimer">
+            EU Regulation 1169/2011 mandates the declaration of specific
+            allergens. Tick all that apply to this batch.
+          </p>
+
+          <div class="allergen-grid" id="allergen-container">
+            <label class="allergen-checkbox"
+              ><input type="checkbox" class="allergen-check" /><span
+                class="custom-box"
+              ></span
+              >Celery</label
+            >
+            <label class="allergen-checkbox"
+              ><input type="checkbox" class="allergen-check" /><span
+                class="custom-box"
+              ></span
+              >Cereals Containing Gluten</label
+            >
+            <label class="allergen-checkbox"
+              ><input type="checkbox" class="allergen-check" /><span
+                class="custom-box"
+              ></span
+              >Crustaceans</label
+            >
+            <label class="allergen-checkbox"
+              ><input type="checkbox" class="allergen-check" /><span
+                class="custom-box"
+              ></span
+              >Eggs</label
+            >
+            <label class="allergen-checkbox"
+              ><input type="checkbox" class="allergen-check" /><span
+                class="custom-box"
+              ></span
+              >Fish</label
+            >
+            <label class="allergen-checkbox"
+              ><input type="checkbox" class="allergen-check" /><span
+                class="custom-box"
+              ></span
+              >Lupin</label
+            >
+            <label class="allergen-checkbox"
+              ><input type="checkbox" class="allergen-check" /><span
+                class="custom-box"
+              ></span
+              >Milk</label
+            >
+            <label class="allergen-checkbox"
+              ><input type="checkbox" class="allergen-check" /><span
+                class="custom-box"
+              ></span
+              >Molluscs</label
+            >
+            <label class="allergen-checkbox"
+              ><input type="checkbox" class="allergen-check" /><span
+                class="custom-box"
+              ></span
+              >Mustard</label
+            >
+            <label class="allergen-checkbox"
+              ><input type="checkbox" class="allergen-check" /><span
+                class="custom-box"
+              ></span
+              >Peanuts</label
+            >
+            <label class="allergen-checkbox"
+              ><input type="checkbox" class="allergen-check" /><span
+                class="custom-box"
+              ></span
+              >Sesame</label
+            >
+            <label class="allergen-checkbox"
+              ><input type="checkbox" class="allergen-check" /><span
+                class="custom-box"
+              ></span
+              >Soybeans</label
+            >
+            <label class="allergen-checkbox"
+              ><input type="checkbox" class="allergen-check" /><span
+                class="custom-box"
+              ></span
+              >Sulphur Dioxide / Sulphites</label
+            >
+            <label class="allergen-checkbox"
+              ><input type="checkbox" class="allergen-check" /><span
+                class="custom-box"
+              ></span
+              >Tree Nuts</label
+            >
+            <label class="allergen-checkbox"
+              ><input
+                type="checkbox"
+                class="allergen-check"
+                id="no-allergens"
+              /><span class="custom-box"></span>No Allergens Present</label
+            >
+            <label class="allergen-checkbox" style="grid-column: span 2">
+              <input type="checkbox" class="allergen-check" id="other" />
+              <span class="custom-box"></span>
+              <span class="label-text"
+                >Other Allergens / May Contain (e.g., Buckwheat, Pine nuts, or
+                cross-contamination risks):</span
+              >
+            </label>
+          </div>
+        </div>
+      </form>
+
+      <section class="ledger-container">
+        <span class="system-label ledger-label">Current Ledger</span>
+        <div class="table-wrapper">
+          <table class="ledger-table">
+            <thead>
+              <tr>
+                <th>SKU ID</th>
+                <th>Product Name</th>
+                <th>Stock Level</th>
+                <th>Unit Price</th>
+                <th>Status</th>
+                <th class="action-header"></th>
+              </tr>
+            </thead>
+            <tbody id="producer-ledger-body"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+    <script src="app.js"></script>
+  </body>
+</html>

@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Customer Portal // GLH CO-OP</title>
+    <link rel="stylesheet" href="style1.css" />
+  </head>
+  <body>
+    <input type="checkbox" id="menu-toggle" class="menu-checkbox" />
+
+    <nav class="global-nav">
+      <div class="nav-left">
+        <label for="menu-toggle" class="nav-icon" aria-label="menu">
+          <div class="line-1"></div>
+          <div class="line-2"></div>
+          <div class="line-3"></div>
+        </label>
+      </div>
+      <div class="logo">
+        <a href="index.html">G L H // CO-OP</a>
+      </div>
+      <div class="nav-right">
+        <a href="cart.html" class="nav-item">CART [0]</a>
+      </div>
+    </nav>
+    <aside class="system-menu" id="system-menu">
+      <div class="menu-matrix">
+        <span
+          class="system-label text-sage"
+          style="display: block; margin-bottom: 60px"
+          >System Wayfinding</span
+        >
+        <nav class="menu-nav">
+          <a href="index.html" class="menu-link">Home</a>
+          <a href="products.html" class="menu-link">Shop</a>
+          <a href="farmers.html" class="menu-link">Our Farmers</a>
+          <a href="producer-login.html" class="menu-link">Producer Node</a>
+          <a href="batch-trace.html" class="menu-link">Batch Trace</a>
+          <a href="#" class="menu-link">Delivery/<br />Collection</a>
+          <a href="kitchen-hub.html" class="menu-link">Kitchen Hub</a>
+          <a href="#" class="menu-link">Plant Knowledge</a>
+        </nav>
+      </div>
+    </aside>
+
+    <label for="menu-toggle" class="menu-shield" id="menu-shield"></label>
+
+    <main class="customer-portal">
+      <header class="portal-header">
+        <h1 class="welcome-title" id="welcome-title">Welcome Back.</h1>
+        <a href="#" class="system-btn" id="manage-account-btn">Manage Account</a>
+      </header>
+
+      <section class="order-history-container">
+        <h2 class="section-heading">Order History</h2>
+
+        <div class="system-table-wrapper">
+          <table class="system-table">
+            <thead>
+              <tr>
+                <th>Order Ref</th>
+                <th>Date</th>
+                <th>Items</th>
+                <th>Total</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="order-history-body">
+              <tr><td colspan="5" style="font-family:'Courier New',monospace;font-size:12px;padding:24px;color:#555;">LOADING ORDER MANIFEST...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="portal-actions">
+        <a href="products.html" class="system-btn">Start New Order</a>
+      </section>
+    </main>
+
+    <footer class="massive-footer">
+      <div class="footer-content">
+        <h2>Traceable<br />Local<br />Verified</h2>
+      </div>
+    </footer>
+    <script src="app.js"></script>
+  </body>
+</html>

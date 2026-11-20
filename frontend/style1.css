@@ -1,0 +1,1944 @@
+/* G L H // CO-OP  main stylesheet
+   table of contents:
+   01. global setup
+   02. structural components
+   03. page styles
+   04. responsive architecture */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* high contrast black and white to meet WCAG AA standards */
+body {
+  background-color: #fbfbf9;
+  color: #111111;
+  font-family: Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* makes the logo link look like plain text */
+.logo a {
+  text-decoration: none;
+  color: inherit;
+}
+
+/* shared styles for all action buttons across the site */
+.system-btn,
+.system-submit,
+.cart-submit {
+  background-color: #111111;
+  color: #ffffff;
+  border: none;
+  padding: 20px 40px;
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: 12px;
+  font-weight: bold;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  text-decoration: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    background-color 0.2s,
+    color 0.2s,
+    opacity 0.2s;
+}
+
+/* sage green hover state */
+.system-btn:hover,
+.system-submit:hover:not(:disabled),
+.cart-submit:hover {
+  background-color: #8a9a86;
+  color: #ffffff;
+}
+
+/* greyed out state when the button is disabled */
+.system-submit:disabled {
+  background-color: #e0e0e0;
+  color: #999999;
+  cursor: not-allowed;
+}
+
+/* blue variant used for GDPR related links */
+.blue-btn {
+  background-color: #0000ff !important;
+  color: #ffffff !important;
+}
+.blue-btn:hover {
+  background-color: #111111 !important;
+}
+
+/* outlined ghost button with transparent background */
+.ghost-btn {
+  background-color: transparent !important;
+  color: #111111 !important;
+  border: 1px solid #111111 !important;
+}
+.ghost-btn:hover {
+  background-color: #111111 !important;
+  color: #ffffff !important;
+}
+
+/* the main nav bar stays fixed at the top of the page */
+.global-nav {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  padding: 24px 40px;
+  border-bottom: 1px solid #111111;
+  background-color: #fbfbf9;
+  position: sticky;
+  top: 0;
+  z-index: 1001;
+}
+
+/* left side of the nav holds the hamburger */
+.nav-left {
+  display: flex;
+  justify-content: flex-start;
+}
+/* right side holds the cart and login links */
+.nav-right {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 32px; 
+}
+/* the hamburger icon wrapper */
+.nav-icon {
+  display: block;
+  width: 32px;
+  cursor: pointer;
+}
+
+/* each line of the hamburger */
+.nav-icon div {
+  height: 2px;
+  background-color: #111111;
+  margin: 6px 0;
+  border-radius: 2px;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  transform-origin: left center;
+}
+
+/* staggered line widths give the icon a brutalist look */
+.line-1 {
+  width: 32px;
+}
+.line-2 {
+  width: 20px;
+}
+.line-3 {
+  width: 26px;
+}
+
+/* all lines expand and change colour on hover */
+.nav-icon:hover div {
+  width: 32px;
+  background-color: #8a9a86;
+}
+
+/* GLH wordmark in the centre of the nav */
+.logo {
+  font-weight: bold;
+  letter-spacing: 2px;
+  text-align: center;
+  font-size: 18px;
+}
+
+/* nav link text styling */
+.nav-item {
+  font-family: "Courier New", Courier, monospace;
+  font-weight: bold;
+  text-decoration: none;
+  color: #111111;
+  font-size: 14px;
+  text-transform: uppercase;
+}
+
+/* the hidden checkbox that controls the open/close state of the menu */
+.menu-checkbox {
+  display: none;
+}
+
+/* stops the page scrolling when the menu is open */
+body:has(.menu-checkbox:checked) {
+  overflow: hidden;
+}
+
+/* the slide in menu panel */
+.system-menu {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: calc(100% - 60px);
+  max-width: 440px;
+  height: 100vh;
+  background-color: #111111;
+  color: #ffffff;
+  z-index: 1000;
+  transform: translateX(-100%);
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  border-right: 1px solid #333333;
+  overflow-y: auto;
+}
+
+/* padding for the menu content */
+.menu-matrix {
+  padding: 120px 40px;
+}
+.menu-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+}
+
+/* scales the link text between 40px and 64px so it never overflows on mobile */
+.menu-link {
+  font-family: Georgia, serif;
+  font-size: clamp(40px, 6vw, 64px);
+  color: #ffffff;
+  text-decoration: none;
+  line-height: 1;
+  transition: color 0.2s ease;
+}
+
+.menu-link:hover {
+  color: #8a9a86;
+}
+
+/* the dark blurred overlay that appears behind the open menu */
+.menu-shield {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100vh;
+  background-color: rgba(17, 17, 17, 0.6);
+  z-index: 999;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.4s ease;
+  backdrop-filter: blur(4px);
+  cursor: pointer;
+  display: block;
+}
+
+/* slides the menu in when the checkbox is ticked */
+.menu-checkbox:checked ~ .system-menu {
+  transform: translateX(0);
+}
+/* fades in the shield overlay */
+.menu-checkbox:checked ~ .menu-shield {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* morphs the hamburger into an X shape when the menu is open */
+.menu-checkbox:checked ~ .global-nav .nav-icon .line-1 {
+  transform: rotate(45deg);
+  width: 32px;
+}
+.menu-checkbox:checked ~ .global-nav .nav-icon .line-2 {
+  opacity: 0;
+  width: 0;
+}
+.menu-checkbox:checked ~ .global-nav .nav-icon .line-3 {
+  transform: rotate(-45deg);
+  width: 32px;
+}
+
+/* GDPR cookie consent modal */
+.intercept-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(13px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 20px;
+}
+
+/* the white modal box */
+.intercept-modal {
+  background-color: #fbfbf9;
+  border: 1px solid #111111;
+  width: 100%;
+  max-width: 600px;
+  padding: 60px;
+  display: flex;
+  flex-direction: column;
+}
+
+.intercept-header {
+  margin-bottom: 40px;
+}
+.text-blue {
+  color: #0000ff !important;
+}
+.intercept-title {
+  font-family: Georgia, serif;
+  font-size: 32px;
+  font-weight: normal;
+  margin-top: 12px;
+}
+.intercept-body p {
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: 14px;
+  line-height: 1.6;
+  color: #555555;
+  margin-bottom: 24px;
+}
+
+/* the checkbox options section */
+.consent-options {
+  border-top: 1px solid #e0e0e0;
+  border-bottom: 1px solid #e0e0e0;
+  padding: 40px 0;
+  margin-bottom: 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* the two button row at the bottom of the modal */
+.intercept-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+/* hero section padding */
+.hero-section {
+  padding: 80px 40px 40px;
+  text-align: center;
+}
+.hero-section h1 {
+  font-family: Georgia, serif;
+  font-size: 80px;
+  font-weight: normal;
+  line-height: 1;
+}
+
+/* constrains the hero image to a widescreen aspect ratio */
+.hero-image-container {
+  width: 80%;
+  aspect-ratio: 16 / 6;
+  display: block;
+  margin: 0 auto 60px;
+  object-fit: cover;
+}
+
+/* the about us text block */
+.intro-section {
+  padding: 0 40px 80px;
+  max-width: 900px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.intro-section h2 {
+  font-family: Georgia, serif;
+  font-size: 38px;
+  letter-spacing: 1px;
+  margin-bottom: 20px;
+}
+.intro-section p {
+  font-family: Georgia, serif;
+  font-size: 32px;
+  line-height: 1.4;
+  color: #000000;
+}
+
+/* massive footer with the TRACEABLE LOCAL VERIFIED text */
+.massive-footer {
+  background-color: #111111;
+  color: #ffffff;
+  padding: 100px 40px;
+  overflow: hidden;
+  border-top: 1px solid #111111;
+}
+
+/* clamp scales the text between 60px and 260px so it never overflows */
+.footer-content h2 {
+  font-size: clamp(60px, 14vw, 260px);
+  line-height: 0.8;
+  font-weight: 700;
+  letter-spacing: -0.05em;
+  text-transform: uppercase;
+  overflow-wrap: break-word;
+}
+
+
+
+/* home page */
+
+
+
+/* the 6 column portal grid on the homepage */
+.portal-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  border-top: 1px solid #111111;
+  border-left: 1px solid #111111;
+}
+
+/* each box spans 2 columns by default */
+.grid-box {
+  grid-column: span 2;
+  border-right: 1px solid #111111;
+  border-bottom: 1px solid #111111;
+  padding: 60px 40px;
+  text-decoration: none;
+  color: inherit;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 400px;
+  transition:
+    background-color 0.2s,
+    color 0.2s;
+}
+
+/* hover turns the box sage green */
+.grid-box:hover {
+  background-color: #8a9a86;
+  color: #ffffff;
+}
+
+/* removes the right border from the last box in each row */
+.grid-box:nth-child(3n) {
+  border-right: none;
+}
+/* the two login boxes at the bottom span 3 columns each */
+.grid-box:nth-child(7),
+.grid-box:nth-child(8) {
+  grid-column: span 3;
+}
+/* adds a divider between the two bottom boxes */
+.grid-box:nth-child(7) {
+  border-right: 1px solid #111111;
+}
+.grid-box:nth-child(8) {
+  border-right: none;
+}
+
+/* the numbered label in the top corner of each box */
+.box-index {
+  font-family: "Courier New", Courier, monospace;
+  font-size: 14px;
+  opacity: 0.5;
+}
+/* the large serif title inside each grid box */
+.box-title {
+  font-family: Georgia, serif;
+  font-weight: normal;
+  font-size: clamp(32px, 4vw, 48px);
+  line-height: 1.1;
+  word-wrap: break-word;
+}
+
+
+
+/* shop produce page */
+
+
+
+/* the 3 column product grid */
+.product-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  background-color: transparent; 
+  border-top: 1px solid #111111; 
+  border-left: 1px solid #111111; 
+}
+
+/* individual product cards */
+.product-card {
+  display: flex;
+  flex-direction: column;
+  background-color: #fbfbf9;
+  text-decoration: none;
+  color: inherit;
+  
+  
+  border-right: 1px solid #111111; 
+  border-bottom: 1px solid #111111; 
+}
+
+/* the photo slot at the top of the card */
+.product-image-slot {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  border-bottom: 1px solid #111111; 
+  overflow: hidden;
+}
+
+/* makes the image fill the slot without stretching */
+.product-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* repeated to override styles inherited from other contexts */
+.product-card {
+  display: flex;
+  flex-direction: column;
+  background-color: #fbfbf9; 
+  text-decoration: none;
+  color: inherit;
+}
+
+/* the text content area below the photo */
+.product-details {
+  display: flex;
+  flex-direction: column;
+  padding: 24px;
+  flex-grow: 1;
+}
+
+/* producer name and batch info sit on the same row */
+.product-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 24px;
+  min-height: 60px;
+}
+
+/* the batch number and status badge stack on the right */
+.product-meta-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 12px;
+}
+
+/* small greyed producer name */
+.product-vendor {
+  font-size: 13px;
+  font-weight: bold;
+  letter-spacing: 1px;
+  color: #555555;
+  text-transform: uppercase;
+}
+
+/* the large product name */
+.box-title {
+  font-size: 32px;
+  margin-bottom: 24px;
+  text-transform: none;
+}
+
+/* allergen info displayed in monospace */
+.product-allergen {
+  font-family: "Courier New", Courier, monospace;
+  font-size: 16px;
+  font-weight: bold;
+  color: #555555;
+  margin-bottom: 16px;
+}
+
+/* price pinned to the bottom of the card */
+.product-price {
+  font-size: 14px;
+  font-weight: bold;
+  margin-top: auto;
+}
+
+/* the add to cart button */
+.product-action {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    padding: 16px;
+    background-color: transparent;
+    border: none;
+    border-top: 1px solid #111111;
+    color: #111111;
+    cursor: pointer;
+    text-align: left;
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: bold;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+/* sage green on hover */
+.product-action:hover {
+    background-color: #8A9A86;
+    color: #FBFBF9;
+}
+/* hovering anywhere on the card also triggers the button */
+.product-card:hover .product-action {
+  background-color: #8a9a86; 
+  color: #ffffff;
+}
+
+
+
+/* farmer directory page */
+
+
+
+/* the alternating rows of photo and text */
+.farmer-directory {
+  border-top: 1px solid #111111;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 1px gap between the two halves acts as the internal border */
+.farmer-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border-bottom: 1px solid #111111;
+  background-color: #111111;
+  gap: 1px;
+}
+
+/* the photo and info panels share the same off-white background */
+.farmer-media,
+.farmer-info {
+  background-color: #fbfbf9;
+}
+
+/* odd rows put the photo on the left */
+.farmer-row:nth-child(odd) .farmer-media {
+  order: 1;
+}
+.farmer-row:nth-child(odd) .farmer-info {
+  order: 2;
+}
+/* even rows swap image and text */
+.farmer-row:nth-child(even) .farmer-info {
+  order: 1;
+}
+.farmer-row:nth-child(even) .farmer-media {
+  order: 2;
+}
+
+/* the photo fills its half of the row */
+.farmer-media {
+  width: 100%;
+  height: 100%;
+  min-height: 500px;
+}
+/* forces the photo to cover the container and applies greyscale filter */
+.farmer-photo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  filter: grayscale(100%);
+}
+
+/* text content padding for the info half */
+.farmer-info {
+  padding: 80px 10%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+/* small uppercase id tag above the name */
+.farmer-id {
+  font-family: "Courier New", Courier, monospace;
+  font-size: 12px;
+  font-weight: bold;
+  color: #555555;
+  margin-bottom: 16px;
+  letter-spacing: 1px;
+}
+/* large serif farmer name */
+.farmer-name {
+  font-family: Georgia, serif;
+  font-size: clamp(48px, 5vw, 72px);
+  line-height: 1.1;
+  margin-bottom: 8px;
+}
+/* farm name in small caps below the personal name */
+.farm-name {
+  font-size: 18px;
+  font-weight: bold;
+  letter-spacing: 2px;
+  margin-bottom: 40px;
+  text-transform: uppercase;
+}
+
+/* stats table below the bio */
+.farmer-data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  background-color: #ffffff;
+}
+.farmer-data-table td {
+  border: 1px solid #111111;
+  padding: 20px;
+}
+/* left column labels are bold and greyed */
+.farmer-data-table td:first-child {
+  font-weight: bold;
+  color: #555555;
+  width: 40%;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-size: 12px;
+}
+
+/* ==========================================================================
+   KITCHEN HUB PAGE
+   ========================================================================== */
+
+.kitchen-header {
+  padding: 120px 40px 60px;
+  border-bottom: 1px solid #111111;
+  background-color: #fbfbf9;
+}
+
+.recipe-directory {
+  border-top: 1px solid #111111;
+  display: flex;
+  flex-direction: column;
+}
+
+.recipe-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border-bottom: 1px solid #111111;
+  background-color: #111111;
+  gap: 1px;
+}
+
+.recipe-media,
+.recipe-info {
+  background-color: #fbfbf9;
+}
+
+/* odd rows put the photo on the left */
+.recipe-row:nth-child(odd) .recipe-media {
+  order: 1;
+}
+.recipe-row:nth-child(odd) .recipe-info {
+  order: 2;
+}
+/* even rows swap image and text */
+.recipe-row:nth-child(even) .recipe-info {
+  order: 1;
+}
+.recipe-row:nth-child(even) .recipe-media {
+  order: 2;
+}
+
+/* photo fills its half of the row */
+.recipe-media {
+  position: relative;
+  min-height: 500px;
+}
+
+.recipe-photo {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.recipe-info {
+  padding: 80px 10%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.recipe-id {
+  font-family: "Courier New", Courier, monospace;
+  font-size: 12px;
+  font-weight: bold;
+  color: #555555;
+  margin-bottom: 16px;
+  letter-spacing: 1px;
+}
+
+.recipe-title {
+  font-family: Georgia, serif;
+  font-size: clamp(48px, 5vw, 64px);
+  line-height: 1.1;
+  margin-bottom: 40px;
+  letter-spacing: -1px;
+}
+
+.recipe-meta {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border-top: 1px solid #111111;
+  border-bottom: 1px solid #111111;
+  padding: 24px 0;
+  margin-bottom: 60px;
+}
+
+.meta-block {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.meta-block:nth-child(2) {
+  border-left: 1px solid #111111;
+  padding-left: 40px;
+}
+
+.meta-label,
+.data-heading {
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: 11px;
+  font-weight: bold;
+  letter-spacing: 2px;
+  color: #555555;
+  text-transform: uppercase;
+}
+
+.meta-value {
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: 14px;
+  font-weight: bold;
+  letter-spacing: 1px;
+  color: #111111;
+}
+
+.recipe-data {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 40px;
+}
+
+.bom-list {
+  list-style: none;
+  margin-top: 24px;
+}
+
+.bom-list li {
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: 13px;
+  line-height: 1.6;
+  margin-bottom: 12px;
+  color: #111111;
+  display: flex;
+  gap: 12px;
+}
+
+.instructions-text {
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: 13px;
+  line-height: 1.8;
+  color: #111111;
+  margin-top: 24px;
+}
+
+/* Responsive Overrides */
+
+/* authentication terminal page */
+
+
+
+/* the split form and context panel layout */
+.auth-terminal {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border-top: 1px solid #111111;
+  border-bottom: 1px solid #111111;
+  background-color: #111111;
+  gap: 1px;
+  min-height: 80vh;
+}
+
+/* both panels share the same off-white background */
+.auth-panel {
+  background-color: #fbfbf9;
+  padding: 100px 12%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+/* the left context panel has extra top padding so it doesnt feel cramped */
+.context-panel {
+  align-items: flex-start;
+  justify-content: flex-start;
+  padding-top: 120px;
+}
+
+/* small uppercase label above the page title */
+.auth-label {
+  font-size: 13px;
+  font-weight: bold;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-bottom: 24px;
+  display: block;
+}
+/* the massive serif page title */
+.auth-title {
+  font-family: Georgia, serif;
+  font-size: clamp(80px, 8vw, 140px);
+  font-weight: normal;
+  line-height: 0.9;
+  letter-spacing: -2px;
+  margin-bottom: 40px;
+}
+/* small supporting text below the title */
+.auth-disclaimer {
+  font-size: 12px;
+  line-height: 1.6;
+  letter-spacing: 1px;
+  color: #555555;
+  text-transform: uppercase;
+  max-width: 400px;
+}
+
+/* the login or registration form */
+.auth-form {
+  width: 100%;
+  max-width: 500px;
+  margin: 0 auto;
+}
+/* spacing between input groups */
+.input-group {
+  margin-bottom: 60px;
+}
+
+/* large serif input fields with a bottom border only */
+.auth-input {
+  width: 100%;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid #111111;
+  padding: 16px 0;
+  font-family: Georgia, serif;
+  font-size: 32px;
+  color: #111111;
+  outline: none;
+  border-radius: 0;
+  transition: border-color 0.2s ease;
+}
+
+/* placeholder colour is light grey */
+.auth-input::placeholder {
+  color: #cccccc;
+  font-family: Georgia, serif;
+}
+/* active field gets a thicker sage green border */
+.auth-input:focus {
+  border-bottom: 2px solid #8a9a86;
+}
+/* the link to register sits below the form */
+.auth-footer-status {
+  text-align: center;
+  border-top: 1px solid #e0e0e0;
+  padding-top: 24px;
+}
+/* the mode label at the very bottom of the form panel */
+.auth-mode {
+  font-size: 13px;
+  font-weight: bold;
+  letter-spacing: 2px;
+  color: #999999;
+  text-transform: uppercase;
+}
+
+
+
+/* customer portal page */
+
+
+
+/* the portal layout */
+.customer-portal {
+  display: flex;
+  flex-direction: column;
+  background-color: #fbfbf9;
+  min-height: 60vh;
+}
+
+/* the welcome header section */
+.portal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 80px 40px;
+  border-bottom: 1px solid #111111;
+}
+
+/* the big personalised greeting */
+.welcome-title {
+  font-family: Georgia, serif;
+  font-size: clamp(48px, 6vw, 80px);
+  font-weight: bold;
+  letter-spacing: -1px;
+}
+
+/* order history section container */
+.order-history-container {
+  padding: 60px 40px 0;
+}
+
+/* section heading labels */
+.section-heading {
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: 14px;
+  font-weight: bold;
+  letter-spacing: 1px;
+  color: #111111;
+  text-transform: uppercase;
+  margin-bottom: 24px;
+}
+
+/* horizontal scroll wrapper so the table doesnt break the layout on small screens */
+.system-table-wrapper {
+  overflow-x: auto;
+  border-left: 1px solid #111111;
+  border-top: 1px solid #111111;
+  margin-bottom: 80px;
+}
+
+/* the order history table */
+.system-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+/* shared cell padding and borders */
+.system-table th,
+.system-table td {
+  border-right: 1px solid #111111;
+  border-bottom: 1px solid #111111;
+  padding: 24px;
+  text-align: left;
+}
+
+/* dark header row */
+.system-table th {
+  background-color: #111111;
+  color: #ffffff;
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: 13px;
+  font-weight: bold;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+/* light body cells */
+.system-table td {
+  background-color: #fbfbf9;
+  font-family: Georgia, serif;
+  font-size: 14px;
+  font-weight: bold;
+  color: #111111;
+}
+
+/* the GLH order reference number in monospace */
+.system-table td.ref-cell {
+  font-family: "Courier New", Courier, monospace;
+  color: #555555;
+  font-size: 12px;
+}
+
+/* the delivered status column */
+.system-table td.status-cell {
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: 13px;
+  font-weight: bold;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+/* the action buttons below the table */
+.portal-actions {
+  padding: 0 40px 80px;
+  display: flex;
+  justify-content: flex-start;
+}
+
+/* full width black submit button */
+.auth-submit {
+  width: 100%;
+  background-color: #111111;
+  color: #ffffff;
+  border: none;
+  padding: 24px;
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: 12px;
+  font-weight: bold;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  cursor: pointer;
+  margin-bottom: 60px;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+/* sage green on hover */
+.auth-submit:hover { 
+  background-color: #8a9a86; 
+  color: #ffffff; 
+}
+
+
+
+/* active cart page */
+
+
+
+/* the cart page outer container */
+.cart-container {
+  padding: 80px 40px 120px;
+}
+/* large serif cart title */
+.cart-title {
+  font-family: Georgia, serif;
+  font-size: clamp(60px, 8vw, 100px);
+  font-weight: normal;
+  margin-bottom: 40px;
+  letter-spacing: -1px;
+}
+
+/* the 2 column grid for items on the left and summary on the right */
+.cart-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  background-color: #111111;
+  border: 1px solid #111111;
+  gap: 1px;
+  align-items: start;
+}
+
+/* items stack vertically with 1px gaps between them */
+.cart-items {
+  display: flex;
+  flex-direction: column;
+  background-color: #111111;
+  gap: 1px;
+}
+/* each cart item is a 3 column grid for image, details, and metrics */
+.cart-item {
+  display: grid;
+  grid-template-columns: 300px 1fr 150px;
+  background-color: #111111;
+  gap: 1px;
+}
+
+/* the remove button turns red on hover */
+.remove-btn {
+  background-color: #fbfbf9;
+  border: none;
+  cursor: pointer;
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: 12px;
+  font-weight: bold;
+  letter-spacing: 2px;
+  color: #111111;
+  text-transform: uppercase;
+  transition:
+    background-color 0.2s,
+    color 0.2s;
+}
+
+.remove-btn:hover {
+  background-color: #e63946;
+  color: #ffffff;
+}
+
+/* all the right column panels share the off-white background */
+.item-media,
+.item-details,
+.item-metrics,
+.metric-cell,
+.order-summary {
+  background-color: #fbfbf9;
+}
+/* square image slot */
+.item-media {
+  aspect-ratio: 1 / 1;
+  background-color: #e0e0e0;
+}
+.item-media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  mix-blend-mode: multiply;
+}
+
+/* product name and info text area */
+.item-details {
+  padding: 40px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+/* the product name */
+.item-name {
+  font-family: Georgia, serif;
+  font-size: 24px;
+  font-weight: bold;
+  margin-bottom: 8px;
+}
+/* allergen tag in monospace */
+.item-allergen {
+  font-family: "Courier New", Courier, monospace;
+  font-size: 13px;
+  font-weight: bold;
+  color: #555555;
+  margin-bottom: 16px;
+  letter-spacing: 1px;
+}
+/* farm name in small caps */
+.item-farm {
+  font-size: 12px;
+  font-weight: bold;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+/* the right metrics column stacks price, qty input and remove button */
+.item-metrics {
+  display: flex;
+  flex-direction: column;
+  background-color: #111111;
+  gap: 1px;
+}
+/* each metric cell gets equal space */
+.metric-cell {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: Georgia, serif;
+  font-size: 14px;
+  font-weight: bold;
+}
+/* the quantity input field fills its cell */
+.qty-input {
+  width: 100%;
+  height: 100%;
+  border: none;
+  background: transparent;
+  text-align: center;
+  font-family: Georgia, serif;
+  font-size: 14px;
+  font-weight: bold;
+  outline: none;
+}
+
+/* the order summary panel on the right */
+.order-summary {
+  padding: 40px;
+  display: flex;
+  flex-direction: column;
+}
+/* summary heading with underline */
+.summary-heading {
+  font-family: Georgia, serif;
+  font-size: 16px;
+  font-weight: bold;
+  letter-spacing: 1px;
+  border-bottom: 2px solid #111111;
+  padding-bottom: 8px;
+  margin-bottom: 40px;
+}
+
+/* delivery radio button section */
+.delivery-options {
+  margin-bottom: 40px;
+}
+
+/* a single delivery option row */
+.delivery-toggle {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 24px;
+  border: 1px solid #111111;
+  margin-bottom: 16px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: bold;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+/* the subtotal VAT delivery and total table */
+.summary-totals {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: Georgia, serif;
+  font-size: 12px;
+  font-weight: bold;
+}
+.summary-totals td {
+  padding: 8px 0;
+}
+/* right aligns the price column */
+.summary-totals .numeric {
+  text-align: right;
+}
+/* left column label styling */
+.summary-totals tr td:first-child {
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: 13px;
+  letter-spacing: 1px;
+  color: #555555;
+}
+/* the grand total row has a top border to separate it */
+.grand-total td {
+  border-top: 1px solid #111111;
+  padding-top: 16px;
+  font-size: 14px;
+  color: #111111;
+}
+
+/* checkout button sits at the bottom of the summary panel */
+.cart-submit {
+  margin-top: auto;
+  padding: 24px;
+}
+
+
+
+/* batch trace page */
+
+
+
+/* the batch trace container */
+.batch-container {
+  padding: 120px 40px;
+  max-width: 1400px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 70vh;
+}
+
+/* wrapper for the search input */
+.batch-search-wrapper {
+  margin-bottom: 80px;
+  width: 100%;
+  max-width: 800px;
+  text-align: center;
+}
+
+/* the large text search field */
+.batch-input {
+  width: 100%;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid #111111;
+  padding-bottom: 16px;
+  font-family: Georgia, serif;
+  font-size: clamp(40px, 6vw, 64px);
+  font-weight: bold;
+  color: #111111;
+  text-align: center;
+  outline: none;
+  border-radius: 0;
+  text-transform: uppercase;
+  transition: border-color 0.2s ease;
+}
+
+/* greyed placeholder */
+.batch-input::placeholder {
+  color: #cccccc;
+}
+
+/* sage green border when the field is active */
+.batch-input:focus {
+  border-bottom: 2px solid #8a9a86;
+}
+
+/* the 3 cell results grid */
+.batch-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  background-color: #111111;
+  border: 1px solid #111111;
+  gap: 1px;
+  width: 100%;
+}
+
+/* each data cell */
+.batch-cell {
+  background-color: #fbfbf9;
+  padding: 60px 40px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+}
+
+/* small uppercase label at the top of each cell */
+.batch-label {
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: 12px;
+  font-weight: bold;
+  letter-spacing: 1px;
+  color: #111111;
+  text-transform: uppercase;
+  margin-bottom: 60px;
+}
+
+/* the large value display */
+.batch-value {
+  font-family: Georgia, serif;
+  font-size: clamp(32px, 4vw, 48px);
+  font-weight: bold;
+  line-height: 1.1;
+  color: #111111;
+}
+
+/* the small unit or supporting text below the value */
+.batch-subtext {
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: 14px;
+  letter-spacing: 2px;
+  color: #555555;
+  display: block;
+  margin-top: 12px;
+}
+
+
+
+/* producer dashboard page */
+
+
+
+/* the dashboard outer wrapper */
+.dashboard-terminal {
+  display: flex;
+  flex-direction: column;
+  background-color: #fbfbf9;
+}
+
+/* small system labels used throughout the dashboard */
+.system-label {
+  font-size: 13px;
+  font-weight: bold;
+  letter-spacing: 2px;
+  color: #555555;
+  text-transform: uppercase;
+  margin-bottom: 24px;
+  display: block;
+}
+/* blue variant for GDPR related labels */
+.system-label.text-blue {
+  color: #0000ff;
+}
+/* red variant for warning labels */
+.system-label.text-red {
+  color: #e63946;
+}
+
+/* the header section with producer name and farm title */
+.producer-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  padding: 60px 40px;
+  border-bottom: 1px solid #111111;
+}
+/* the large page title */
+.system-title {
+  font-family: Georgia, serif;
+  font-size: clamp(60px, 8vw, 100px);
+  font-weight: normal;
+  line-height: 0.9;
+  letter-spacing: -1px;
+}
+/* the producer name shown in the top right corner */
+.producer-id {
+  font-size: 12px;
+  font-weight: bold;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  padding-bottom: 12px;
+}
+
+/* the three metric boxes at the top of the dashboard */
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  border-bottom: 1px solid #111111;
+}
+/* each metric box */
+.metric-box {
+  padding: 40px;
+  border-right: 1px solid #111111;
+  display: flex;
+  flex-direction: column;
+}
+/* last box has no right border */
+.metric-box:last-child {
+  border-right: none;
+}
+/* small uppercase metric label */
+.metric-label {
+  font-size: 13px;
+  font-weight: bold;
+  letter-spacing: 2px;
+  color: #555555;
+  text-transform: uppercase;
+  margin-bottom: 24px;
+}
+/* the big number display */
+.metric-value {
+  font-family: Georgia, serif;
+  font-size: clamp(32px, 4vw, 48px);
+  color: #111111;
+}
+
+/* the 2 column intake form and ledger layout */
+.manifest-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border-bottom: 1px solid #111111;
+}
+/* each panel */
+.manifest-panel {
+  display: flex;
+  flex-direction: column;
+  background-color: #fbfbf9;
+  padding: 80px 40px;
+}
+/* the form panel has a right border to create the vertical divider */
+.form-panel {
+  border-right: 1px solid #111111;
+}
+/* the big panel heading */
+.panel-title {
+  font-family: Georgia, serif;
+  font-size: clamp(40px, 5vw, 56px);
+  font-weight: normal;
+  margin-bottom: 60px;
+}
+/* the small instruction text below the panel title */
+.panel-disclaimer {
+  font-size: 14px;
+  letter-spacing: 1px;
+  color: #555555;
+  text-transform: uppercase;
+  line-height: 1.6;
+  max-width: 400px;
+  margin-top: -40px;
+  margin-bottom: 60px;
+}
+
+/* the product intake form */
+.intake-form {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+}
+/* a single form field row */
+.input-row {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 40px;
+}
+/* two column layout for price and stock fields side by side */
+.input-group-split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 40px;
+  margin-bottom: 40px;
+}
+/* the small uppercase field label */
+.input-label {
+  font-size: 13px;
+  font-weight: bold;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-bottom: 16px;
+}
+
+/* form inputs with a bottom border only */
+.system-input {
+  width: 100%;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid #111111;
+  padding-bottom: 16px;
+  font-family: Georgia, serif;
+  font-size: 24px;
+  color: #111111;
+  outline: none;
+  border-radius: 0;
+  transition: border-color 0.2s ease;
+}
+/* light grey placeholder */
+.system-input::placeholder {
+  color: #cccccc;
+}
+/* active field gets a sage green underline */
+.system-input:focus {
+  border-bottom: 2px solid #8a9a86;
+}
+
+/* the allergen checkbox grid */
+.allergen-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  row-gap: 24px;
+  column-gap: 40px;
+}
+
+/* a single allergen label and checkbox row */
+.allergen-checkbox {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  cursor: pointer;
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: 14px;
+  font-weight: bold;
+  line-height: 1.4;
+  text-transform: uppercase;
+}
+
+/* strips away default browser styling for the checkbox so we can customise it */
+.allergen-check {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  border: 1px solid #111111;
+  background-color: #ffffff;
+  cursor: pointer;
+  flex-shrink: 0;
+  border-radius: 0;
+  margin: 0;
+  transition: border 0.1s ease;
+}
+
+/* a thick 4px border creates a solid inner square effect when ticked */
+.allergen-check:checked {
+  border: 4px solid #111111;
+  background-color: #ffffff;
+}
+
+/* the active stock ledger table container */
+.ledger-container {
+  padding: 80px 40px;
+}
+.ledger-label {
+  margin-bottom: 40px;
+}
+/* horizontal scroll so the table doesnt break on smaller screens */
+.table-wrapper {
+  overflow-x: auto;
+}
+
+/* the ledger table itself */
+.ledger-table {
+  width: 100%;
+  border-collapse: collapse;
+  border-top: 1px solid #111111;
+  border-left: 1px solid #111111;
+}
+/* shared cell padding */
+.ledger-table th,
+.ledger-table td {
+  border-right: 1px solid #111111;
+  border-bottom: 1px solid #111111;
+  padding: 24px;
+  text-align: left;
+}
+/* dark header row */
+.ledger-table th {
+  background-color: #111111;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: bold;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+/* batch number in monospace */
+.sku-cell {
+  font-family: "Courier New", Courier, monospace;
+  font-size: 12px;
+  color: #555555;
+  width: 15%;
+}
+/* the product name column */
+.name-cell {
+  font-family: Georgia, serif;
+  font-size: 20px;
+  color: #111111;
+  width: 35%;
+}
+/* stock and price cells */
+.data-cell {
+  font-family: Georgia, serif;
+  font-size: 16px;
+  font-weight: bold;
+  color: #111111;
+  width: 15%;
+}
+
+/* status badges for in stock low stock and out of stock */
+.status-badge {
+  display: inline-block;
+  padding: 12px 20px;
+  font-size: 13px;
+  font-weight: bold;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+.status-badge.active {
+  background-color: #111111;
+  color: #ffffff;
+}
+.status-badge.low-stock {
+  background-color: #e63946;
+  color: #ffffff;
+}
+.status-badge.out-of-stock {
+  background-color: #fbfbf9;
+  color: #111111;
+  border: 1px solid #111111;
+}
+
+.action-header {
+  width: 80px;
+}
+
+/* stretches the cell to fill the full row height so the button fills the space */
+.ledger-table td.action-cell {
+  padding: 0 !important;
+  height: 1px;
+}
+
+/* the remove button */
+.ledger-remove-btn {
+  background: transparent;
+  border: none;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: 16px;
+  color: #111111;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    background-color 0.1s,
+    color 0.1s;
+  border-radius: 0;
+}
+
+/* turns red on hover to warn the user before they delete */
+.ledger-remove-btn:hover {
+  background-color: #e63946;
+  color: #ffffff;
+}
+
+
+
+/* responsive architecture */
+
+
+
+/* tablet: collapse portal and product grids to 2 columns */
+@media (max-width: 1024px) {
+  .portal-grid,
+  .product-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    border-left: 1px solid #111111;
+  }
+  /* overrides the nth-child border rules from the desktop layout */
+  .grid-box,
+  .product-card {
+    grid-column: span 1 !important;
+    border-right: 1px solid #111111 !important;
+  }
+  .grid-box:nth-child(2n),
+  .grid-box:nth-child(8),
+  .product-card:nth-child(2n) {
+    border-right: none !important;
+  }
+
+  /* tablet: farmers page collapses to single column with image on top */
+  .farmer-row {
+    grid-template-columns: 1fr !important;
+  }
+  .farmer-row:nth-child(even) .farmer-media,
+  .farmer-row:nth-child(odd) .farmer-media {
+    order: 1 !important;
+    border-bottom: 1px solid #111111;
+    min-height: 400px;
+  }
+  .farmer-row:nth-child(even) .farmer-info,
+  .farmer-row:nth-child(odd) .farmer-info {
+    order: 2 !important;
+    padding: 60px 20px;
+  }
+
+  /* tablet: auth terminal collapses to single column */
+  .auth-terminal {
+    grid-template-columns: 1fr !important;
+    min-height: auto;
+  }
+  .auth-panel {
+    padding: 60px 20px !important;
+  }
+  .context-panel {
+    border-bottom: 1px solid #111111;
+    text-align: center;
+    align-items: center;
+  }
+  .auth-disclaimer {
+    text-align: center;
+  }
+
+  /* tablet: customer portal header stacks vertically */
+  .portal-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 32px;
+    padding: 60px 20px;
+  }
+  .order-history-container {
+    padding: 60px 20px 0;
+  }
+  .portal-actions {
+    padding: 0 20px 60px;
+  }
+
+  /* tablet: cart collapses to a single column */
+  .cart-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .cart-item {
+    grid-template-columns: 1fr !important;
+  }
+  .item-media {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+  }
+  .item-metrics {
+    flex-direction: row;
+  }
+  .metric-cell {
+    padding: 24px 0;
+  }
+
+  /* tablet: batch trace grid collapses to single column */
+  .batch-header-wrapper {
+    width: 100% !important;
+  }
+  .batch-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .batch-cell {
+    border-bottom: 1px solid #111111;
+  }
+  .batch-cell:last-child {
+    border-bottom: none;
+  }
+
+  /* tablet: producer dashboard grids collapse to single column */
+  .metrics-grid,
+  .manifest-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .metric-box,
+  .form-panel {
+    border-right: none !important;
+    border-bottom: 1px solid #111111;
+  }
+  .metric-box:last-child {
+    border-bottom: none;
+  }
+}
+
+  /* tablet: kitchen hub collapses to single column with image on top */
+ .recipe-row {
+    grid-template-columns: 1fr !important;
+  }
+  .recipe-row:nth-child(even) .recipe-media,
+  .recipe-row:nth-child(odd) .recipe-media {
+    order: 1 !important;
+    border-bottom: 1px solid #111111;
+    min-height: 400px;
+  }
+  .recipe-row:nth-child(even) .recipe-info,
+  .recipe-row:nth-child(odd) .recipe-info {
+    order: 2 !important;
+    padding: 60px 20px;
+  }
+  .recipe-data {
+    grid-template-columns: 1fr;
+    gap: 60px;
+  }
+
+
+/* mobile font size overrides */
+@media (max-width: 600px) {
+  .hero-section h1 {
+    font-size: 48px;
+  }
+  .box-title {
+    font-size: 32px;
+  }
+  .footer-content h2 {
+    font-size: 60px;
+  }
+  .intercept-modal {
+    padding: 40px 20px;
+  }
+  /* consent buttons stack to single column on mobile */
+  .intercept-actions {
+    grid-template-columns: 1fr;
+  }
+
+  /* mobile: all grids become single column */
+  .portal-grid,
+  .product-grid {
+    grid-template-columns: 1fr !important;
+    border-left: none;
+  }
+  .grid-box,
+  .product-card {
+    grid-column: span 1 !important;
+    width: 100%;
+    border-right: none !important;
+    border-bottom: 1px solid #111111 !important;
+  }
+
+  /* mobile: producer header stacks vertically */
+  .producer-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 24px;
+  }
+  /* mobile: allergen and input grids become single column */
+  .input-group-split,
+  .allergen-grid {
+    grid-template-columns: 1fr !important;
+  }
+}

@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>GLH | Shop Produce</title>
+    <link rel="stylesheet" href="style1.css" />
+  </head>
+  <body>
+    <input type="checkbox" id="menu-toggle" class="menu-checkbox" />
+
+    <nav class="global-nav">
+      <div class="nav-left">
+        <label for="menu-toggle" class="nav-icon" aria-label="menu">
+          <div class="line-1"></div>
+          <div class="line-2"></div>
+          <div class="line-3"></div>
+        </label>
+      </div>
+      <div class="logo">
+        <a href="index.html">G L H // CO-OP</a>
+      </div>
+      <div class="nav-right">
+        <a href="cart.html" class="nav-item">CART [0]</a>
+      </div>
+    </nav>
+    <aside class="system-menu" id="system-menu">
+      <div class="menu-matrix">
+        <span
+          class="system-label text-sage"
+          style="display: block; margin-bottom: 60px"
+          >System Wayfinding</span
+        >
+        <nav class="menu-nav">
+          <a href="index.html" class="menu-link">Home</a>
+          <a href="farmers.html" class="menu-link">Our Farmers</a>
+          <a href="producer-login.html" class="menu-link">Producer Node</a>
+          <a href="customer-login.html" class="menu-link">Customer Node</a>
+          <a href="batch-trace.html" class="menu-link">Batch Trace</a>
+          <a href="#" class="menu-link">Delivery/<br />Collection</a>
+          <a href="kitchen-hub.html" class="menu-link">Kitchen Hub</a>
+          <a href="#" class="menu-link">Plant Knowledge</a>
+        </nav>
+      </div>
+    </aside>
+
+    <label for="menu-toggle" class="menu-shield" id="menu-shield"></label>
+
+    <header class="hero-section">
+      <h1>SHOP PRODUCE</h1>
+    </header>
+
+    <section class="intro-section">
+      <p>
+        The GLH // CO OP procurement protocol ensures all agricultural inventory
+        is sourced through a highly localized and strictly monitored supply
+        chain. We bypass traditional distribution networks to partner
+        exclusively with top tier regional producers who meet our exact data
+        verification standards.
+      </P>
+        
+  
+    </section>
+
+    <main class="product-grid" id="shop-inventory-grid"></main>
+
+    <footer class="massive-footer">
+      <div class="footer-content">
+        <h2>TRACEABLE.<br />LOCAL.<br />VERIFIED.</h2>
+      </div>
+    </footer>
+    <script src="app.js"></script>
+  </body>
+</html>
