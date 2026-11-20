@@ -38,7 +38,7 @@
 
 /* Editorial photo treatment: muted at rest, natural colour on interaction. */
 .shop-produce-grid .product-image {
-  filter: grayscale(100%);
+  filter: grayscale(30%);
   transition: filter .42s ease;
   will-change: filter;
 }
