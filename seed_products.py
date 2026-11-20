@@ -92,11 +92,11 @@ products = [
     # Elena Rostova (ER)
     ("Elena Rostova",   "Butterhead Lettuce",   8.50, 120, "No Allergens Present", "ER-26-B1", "lettuce.jpeg"),
     ("Elena Rostova",   "Baby Winter Spinach",  12.00, 100, "No Allergens Present", "ER-26-B2", "spinach.jpeg"),
-    ("Elena Rostova",   "Sweet Basil Canopy",   18.00, 0, "No Allergens Present", "ER-26-B3", "basil.png"),
-    ("Elena Rostova",   "Tarragon & Chervil",   22.00, 60, "No Allergens Present", "ER-26-B4", "tarragon.png"),
+    ("Elena Rostova",   "Sweet Basil Canopy",   18.00, 0, "No Allergens Present", "ER-26-B3", "basil.jpg"),
+    ("Elena Rostova",   "Tarragon & Chervil",   22.00, 60, "No Allergens Present", "ER-26-B4", "tarragon.jpeg"),
     # David MacAulay (DM)
     ("David MacAulay",  "Foraged Chanterelles", 45.00, 40, "No Allergens Present", "DM-26-C1", "chanterelles.jpeg"),
-    ("David MacAulay",  "Hen of the Woods",     55.00, 30, "No Allergens Present", "DM-26-C2", "hen ow.png"),
+    ("David MacAulay",  "Hen of the Woods",     55.00, 30, "No Allergens Present", "DM-26-C2", "hen ow.jpeg"),
     ("David MacAulay",  "Bramble Blackberries", 24.00, 90, "No Allergens Present", "DM-26-C3", "blackberries.jpeg"),
     ("David MacAulay",  "Wild Penny Buns",      65.00, 25, "No Allergens Present", "DM-26-C4", "wpb.jpeg"),
     # Chloe Vance (CV)
@@ -108,7 +108,7 @@ products = [
     ("Arthur Pendelton","Spring Blossom Honey", 28.00, 95, "No Allergens Present", "AP-26-E1", "Honeyjar.jpg"),
     ("Arthur Pendelton","Heather Comb Honey",   45.00, 60, "No Allergens Present", "AP-26-E2", "honeycomb.jpg"),
     ("Arthur Pendelton","Raw Beeswax Block",    24.00, 75, "No Allergens Present", "AP-26-E3", "RawBeeswaxBlock.jpg"),
-    ("Arthur Pendelton","Whipped Amber Honey",  32.00, 80, "No Allergens Present", "AP-26-E4", "amber honey.png"),
+    ("Arthur Pendelton","Whipped Amber Honey",  32.00, 80, "No Allergens Present", "AP-26-E4", "amber honey.jpg"),
     # Sarah Jenkins (SJ)
     ("Sarah Jenkins",   "Reserve Cox's Apples", 9.50, 10, "No Allergens Present","SJ-26-F1", "apples.jpg"),
     ("Sarah Jenkins",   "Conference Pears",     11.00, 180, "No Allergens Present","SJ-26-F2", "pear.jpg"),
