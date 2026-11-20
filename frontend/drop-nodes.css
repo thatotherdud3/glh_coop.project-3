@@ -1,0 +1,340 @@
+/* Drop Nodes: page-specific styling based on the GLH Figma concept. */
+.drop-nodes-page {
+  background: #fbfbf9;
+}
+
+.drop-hero {
+  padding: 96px 5% 82px;
+  border-bottom: 1px solid #111111;
+}
+
+.drop-kicker,
+.drop-node-code,
+.drop-node-address,
+.drop-node-meta-label,
+.drop-node-window,
+.drop-node-action,
+.drop-disclaimer,
+.drop-node-details-region,
+.drop-node-close,
+.drop-node-map,
+.drop-node-detail-note {
+  font-family: Helvetica, Arial, sans-serif;
+}
+
+.drop-kicker {
+  color: #999999;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 2px;
+}
+
+.drop-hero h1 {
+  margin: 24px 0 0;
+  font-family: Didot, "Bodoni MT", Georgia, serif;
+  font-weight: normal;
+  font-size: clamp(76px, 9.7vw, 152px);
+  line-height: 0.98;
+  letter-spacing: -0.045em;
+}
+
+.drop-disclaimer {
+  margin-top: 44px;
+  color: #777777;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1.4px;
+  line-height: 1.6;
+}
+
+.drop-node-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border-bottom: 1px solid #111111;
+}
+
+.drop-node-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-width: 0;
+  min-height: 380px;
+  padding: 70px 14% 48px;
+  border: 0;
+  border-right: 1px solid #111111;
+  border-bottom: 1px solid #111111;
+  background: transparent;
+  color: #111111;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.drop-node-card:nth-child(3n) {
+  border-right: 0;
+}
+
+.drop-node-card:nth-last-child(-n + 3) {
+  border-bottom: 0;
+}
+
+.drop-node-card:hover,
+.drop-node-card:focus-visible,
+.drop-node-card.is-selected {
+  background: #f1f1f1;
+}
+
+.drop-node-card:focus-visible {
+  outline: 3px solid #0000ff;
+  outline-offset: -5px;
+}
+
+.drop-node-code {
+  display: block;
+  color: #0000ff;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 2px;
+}
+
+.drop-node-summary {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.drop-node-name {
+  display: block;
+  margin-bottom: 12px;
+  font-family: Didot, "Bodoni MT", Georgia, serif;
+  font-size: clamp(27px, 2.55vw, 39px);
+  font-weight: normal;
+  line-height: 1.12;
+}
+
+.drop-node-card:hover .drop-node-name,
+.drop-node-card:focus-visible .drop-node-name,
+.drop-node-card.is-selected .drop-node-name {
+  font-style: italic;
+}
+
+.drop-node-address {
+  color: #999999;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.2px;
+  line-height: 1.6;
+}
+
+.drop-node-rule {
+  display: block;
+  width: 100%;
+  height: 1px;
+  margin: 30px 0 17px;
+  background: #111111;
+}
+
+.drop-node-meta-label {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+
+.drop-node-window {
+  display: block;
+  margin-top: 12px;
+  font-size: 12px;
+  letter-spacing: 0.9px;
+  line-height: 1.5;
+}
+
+.drop-node-action {
+  display: block;
+  margin-top: 23px;
+  color: #666666;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1.2px;
+}
+
+.drop-node-details {
+  padding: 56px 5% 48px;
+  background: #f1f1f1;
+  border-top: 1px solid #111111;
+  border-bottom: 1px solid #111111;
+  scroll-margin-top: 90px;
+}
+
+.drop-node-details[hidden] {
+  display: none;
+}
+
+.drop-node-details:focus {
+  outline: none;
+}
+
+.drop-node-details-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.drop-node-close {
+  padding: 10px 0;
+  border: 0;
+  background: none;
+  color: #111111;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  cursor: pointer;
+}
+
+.drop-node-close:hover,
+.drop-node-close:focus-visible {
+  text-decoration: underline;
+}
+
+.drop-node-details-body {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr;
+  gap: 60px;
+  margin-top: 50px;
+}
+
+.drop-node-details h2 {
+  margin: 20px 0 14px;
+  font-family: Didot, "Bodoni MT", Georgia, serif;
+  font-size: clamp(46px, 6vw, 94px);
+  font-weight: normal;
+  line-height: 1;
+}
+
+.drop-node-details-region {
+  color: #777777;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+}
+
+.drop-node-details-facts {
+  display: flex;
+  flex-direction: column;
+  gap: 26px;
+}
+
+.drop-node-details-facts p {
+  margin-top: 12px;
+  font-size: 17px;
+}
+
+.drop-node-map {
+  align-self: flex-start;
+  display: inline-flex;
+  gap: 22px;
+  padding: 16px 0;
+  border-bottom: 1px solid #111111;
+  color: #111111;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-decoration: none;
+}
+
+.drop-node-map:hover,
+.drop-node-map:focus-visible {
+  font-style: italic;
+}
+
+.drop-node-detail-note {
+  margin-top: 46px;
+  color: #666666;
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+@media (max-width: 1024px) {
+  .drop-hero {
+    padding: 80px 5% 65px;
+  }
+
+  .drop-node-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .drop-node-card {
+    min-height: 350px;
+    padding: 55px 10% 40px;
+  }
+
+  .drop-node-card:nth-child(3n) {
+    border-right: 1px solid #111111;
+  }
+
+  .drop-node-card:nth-child(2n) {
+    border-right: 0;
+  }
+
+  .drop-node-card:nth-last-child(-n + 3) {
+    border-bottom: 1px solid #111111;
+  }
+
+  .drop-node-card:nth-last-child(-n + 2) {
+    border-bottom: 0;
+  }
+}
+
+@media (max-width: 600px) {
+  .drop-hero {
+    padding: 72px 24px 55px;
+  }
+
+  .drop-hero h1 {
+    font-size: clamp(62px, 13vw, 90px);
+  }
+
+  .drop-disclaimer {
+    margin-top: 32px;
+    font-size: 9px;
+  }
+
+  .drop-node-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .drop-node-card {
+    min-height: 310px;
+    padding: 42px 24px 36px;
+    border-right: 0 !important;
+    border-bottom: 1px solid #111111 !important;
+  }
+
+  .drop-node-card:last-child {
+    border-bottom: 0 !important;
+  }
+
+  .drop-node-name {
+    font-size: 35px;
+  }
+
+  .drop-node-details {
+    padding: 38px 24px;
+  }
+
+  .drop-node-details-body {
+    grid-template-columns: 1fr;
+    gap: 35px;
+    margin-top: 36px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .drop-node-card {
+    transition: none;
+  }
+}
