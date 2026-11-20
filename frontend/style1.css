@@ -410,10 +410,11 @@ body:has(.menu-checkbox:checked) {
     color 0.2s;
 }
 
-/* hover turns the box sage green */
-.grid-box:hover {
-  background-color: #8a9a86;
-  color: #ffffff;
+/* Figma-style subtle light grey hover, also available for keyboard navigation */
+.portal-grid .grid-box:hover,
+.portal-grid .grid-box:focus-visible {
+  background-color: #f1f1f1;
+  color: #111111;
 }
 
 /* removes the right border from the last box in each row */
@@ -439,18 +440,20 @@ body:has(.menu-checkbox:checked) {
   font-size: 14px;
   opacity: 0.5;
 }
-/* Figma-style oversized serif titles, scoped to homepage navigation */
-.portal-grid .box-title {
-  font-family: Georgia, serif;
+/* Large editorial serif titles on the homepage, independent of product styling */
+.portal-grid .grid-box .box-title {
+  font-family: Didot, "Bodoni MT", Georgia, serif;
   font-weight: normal;
-  font-size: clamp(44px, 5vw, 76px);
+  font-size: clamp(46px, 5.5vw, 86px);
   line-height: 1.05;
+  font-style: normal;
   word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 
-/* Italic titles on hover and keyboard focus */
-.grid-box:hover .box-title,
-.grid-box:focus-visible .box-title {
+/* Change the title to italic on hover and keyboard focus */
+.portal-grid .grid-box:hover .box-title,
+.portal-grid .grid-box:focus-visible .box-title {
   font-style: italic;
 }
 
@@ -541,8 +544,8 @@ body:has(.menu-checkbox:checked) {
   text-transform: uppercase;
 }
 
-/* the large product name */
-.box-title {
+/* the large product name: avoid overriding homepage navigation typography */
+.product-card .box-title {
   font-size: 32px;
   margin-bottom: 24px;
   text-transform: none;
