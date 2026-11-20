@@ -26,6 +26,8 @@ CREATE TABLE products (
     allergen_info TEXT,
     batch_number TEXT,
     product_image TEXT DEFAULT 'placeholder.png',
+    harvest_date TEXT DEFAULT NULL,
+    safety_clearance TEXT DEFAULT NULL,
     FOREIGN KEY (producer_id) REFERENCES users(user_id)
 );
 CREATE TABLE orders (

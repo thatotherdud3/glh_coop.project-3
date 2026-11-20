@@ -233,6 +233,11 @@ if (ledgerForm) {
     );
     formData.append("price", document.getElementById("input-price").value);
 
+    const harvestDate = document.getElementById("input-harvest-date");
+    if (harvestDate && harvestDate.value) {
+      formData.append("harvest_date", harvestDate.value);
+    }
+
     // joins the ticked allergen labels into a single comma separated string
     let allergens = Array.from(allergenCheckboxes)
       .map((cb) => cb.parentElement.textContent.trim())

@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>GLH | Batch Trace</title>
     <link rel="stylesheet" href="style1.css" />
+    <link rel="stylesheet" href="batch-trace.css" />
   </head>
   <body>
     <input type="checkbox" id="menu-toggle" class="menu-checkbox" />
@@ -47,38 +48,50 @@
 
     <label for="menu-toggle" class="menu-shield" id="menu-shield"></label>
 
-    <main class="batch-container">
-      <div class="batch-search-wrapper">
-        <form class="batch-form" action="#" method="GET">
-          <input
-            type="text"
-            id="batch-input"
-            class="batch-input"
-            placeholder="ENTER BATCH"
-            required
-            autocomplete="off"
-          />
+    <main class="trace-page">
+      <section class="trace-search" aria-label="Batch lookup">
+        <p class="trace-eyebrow">COMPLIANCE LEDGER</p>
+        <form id="batch-lookup-form" class="trace-form" novalidate>
+          <label for="batch-input" class="trace-sr-only">Enter a batch number</label>
+          <input type="search" id="batch-input" name="batch" class="trace-input"
+            placeholder="ENTER BATCH" maxlength="100" autocomplete="off"
+            spellcheck="false" required aria-describedby="batch-search-status" />
+          <button type="submit" class="trace-search-btn" id="batch-search-btn">
+            TRACE BATCH <span aria-hidden="true">↗</span>
+          </button>
         </form>
-      </div>
+        <p class="trace-status" id="batch-search-status" role="status" aria-live="polite"></p>
+      </section>
 
-      <div class="batch-grid">
-        <article class="batch-cell">
-          <span class="batch-label">ORIGIN</span>
-          <p class="batch-value">FARM NAME</p>
-        </article>
-
-        <article class="batch-cell">
-          <span class="batch-label">HARVEST DATE</span>
-          <p class="batch-value">DD/MM/YYYY</p>
-        </article>
-
-        <article class="batch-cell">
-          <span class="batch-label">SAFETY CLEARANCE</span>
-          <p class="batch-value">
-            VERIFIED<br /><span class="batch-subtext">[PASS]</span>
-          </p>
-        </article>
-      </div>
+      <section id="batch-results" class="trace-results" aria-labelledby="batch-results-heading" hidden>
+        <div class="trace-results-heading">
+          <div>
+            <span class="trace-eyebrow">TRACEABILITY RECORD</span>
+            <h2 id="batch-results-heading">Batch Record.</h2>
+          </div>
+          <div class="trace-identification">
+            <span id="batch-reference"></span>
+            <strong id="batch-product"></strong>
+          </div>
+        </div>
+        <div class="trace-result-grid">
+          <article class="trace-result-cell">
+            <span class="trace-result-label">ORIGIN</span>
+            <p class="trace-result-value" id="batch-origin"></p>
+            <span class="trace-result-note" id="batch-origin-note"></span>
+          </article>
+          <article class="trace-result-cell">
+            <span class="trace-result-label">HARVEST DATE</span>
+            <p class="trace-result-value" id="batch-harvest"></p>
+            <span class="trace-result-note" id="batch-harvest-note"></span>
+          </article>
+          <article class="trace-result-cell">
+            <span class="trace-result-label">SAFETY CLEARANCE</span>
+            <p class="trace-result-value" id="batch-clearance"></p>
+            <span class="trace-result-note" id="batch-clearance-note"></span>
+          </article>
+        </div>
+      </section>
     </main>
 
     <footer class="massive-footer">
@@ -86,5 +99,7 @@
         <h2>TRACEABLE.<br />LOCAL.<br />VERIFIED.</h2>
       </div>
     </footer>
+    <script src="app.js"></script>
+    <script src="batch-trace.js"></script>
   </body>
 </html>

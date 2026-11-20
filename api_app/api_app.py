@@ -2,6 +2,9 @@ import json
 import sqlite3
 import hashlib
 import os
+import re
+from datetime import date
+from urllib.parse import unquote, urlsplit
 from http.server import SimpleHTTPRequestHandler, HTTPServer
 from email.parser import BytesParser
 
@@ -38,6 +41,15 @@ def get_db_connection():
             consented_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """)
+    # Add new nullable trace fields to databases created before this feature.
+    # Historical records must not receive fabricated dates or approvals.
+    columns = {row["name"] for row in conn.execute("PRAGMA table_info(products)")}
+    if columns:
+        if "harvest_date" not in columns:
+            conn.execute("ALTER TABLE products ADD COLUMN harvest_date TEXT")
+        if "safety_clearance" not in columns:
+            conn.execute("ALTER TABLE products ADD COLUMN safety_clearance TEXT")
+
     conn.commit()
     return conn
 
@@ -67,8 +79,8 @@ def insert_inventory(data):
 
     # SQL insert statement for a new product record
     cursor.execute("""
-        INSERT INTO products (producer_id, product_name, price, stock_level, allergen_info, batch_number, product_image)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO products (producer_id, product_name, price, stock_level, allergen_info, batch_number, product_image, harvest_date)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     """, (
         # binds each value to its paramterised placeholder
         data.get("producer_id"),
@@ -77,7 +89,8 @@ def insert_inventory(data):
         data.get("stock_level"),
         data.get("allergen_info"),
         data.get("batch_number"),
-        data.get("product_image")
+        data.get("product_image"),
+        data.get("harvest_date")
     ))
     connection.commit()
     connection.close()
@@ -97,8 +110,73 @@ class NativeAPIHandler(SimpleHTTPRequestHandler):
         self.send_header('Access-Control-Allow-Headers', 'Content-Type')
         self.end_headers()
 
+    def send_json_result(self, status_code, payload):
+        body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+        self.send_response(status_code)
+        self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
     def do_GET(self):
-        if self.path == '/products' or self.path.startswith('/products?'):
+        if self.path.startswith("/batch-trace/"):
+            code = unquote(urlsplit(self.path).path[len("/batch-trace/"):]).strip()
+            if not re.fullmatch(r"[A-Za-z0-9_-]{1,100}", code):
+                self.send_json_result(400, {"message": "Enter a valid batch number."})
+                return
+
+            connection = None
+            try:
+                connection = get_db_connection()
+                has_farms = connection.execute(
+                    "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'farms'"
+                ).fetchone() is not None
+                farm_select = (
+                    "(SELECT f.farm_name FROM farms f "
+                    "WHERE f.user_id = p.producer_id ORDER BY f.farm_id LIMIT 1)"
+                    if has_farms else "NULL"
+                )
+                rows = connection.execute(f"""
+                    SELECT p.batch_number, p.product_name, p.harvest_date,
+                           p.safety_clearance, u.full_name AS producer_name,
+                           {farm_select} AS farm_name
+                    FROM products p
+                    INNER JOIN users u ON u.user_id = p.producer_id
+                    WHERE p.batch_number = ? COLLATE NOCASE
+                    ORDER BY p.product_id ASC
+                    LIMIT 2
+                """, (code,)).fetchall()
+
+                if not rows:
+                    self.send_json_result(404, {"message": "No batch found with that reference."})
+                    return
+                if len(rows) > 1:
+                    self.send_json_result(409, {"message": "Multiple products share this batch number. Contact the cooperative."})
+                    return
+
+                row = rows[0]
+                clearance = (row["safety_clearance"] or "").strip().upper()
+                if clearance not in ("PENDING", "VERIFIED", "REJECTED"):
+                    clearance = "NOT_RECORDED"
+                origin_from_farm = bool(row["farm_name"])
+                self.send_json_result(200, {
+                    "batch_number": row["batch_number"],
+                    "product_name": row["product_name"],
+                    "origin": row["farm_name"] if origin_from_farm else row["producer_name"],
+                    "origin_type": "farm" if origin_from_farm else "producer",
+                    "harvest_date": row["harvest_date"],
+                    "safety_clearance": clearance,
+                })
+            except sqlite3.Error as error:
+                print(f"BATCH TRACE ERROR: {error}")
+                self.send_json_result(500, {"message": "Trace records are currently unavailable."})
+            finally:
+                if connection is not None:
+                    connection.close()
+
+        elif self.path == '/products' or self.path.startswith('/products?'):
             # returns the full product inventory as a JSON array
             self.send_response(200)
             self.send_header('Content-type', 'application/json')
@@ -317,7 +395,16 @@ class NativeAPIHandler(SimpleHTTPRequestHandler):
                 producer_id_raw = data.get("producer_id", 1)
 
                 # casts each field to the correct type before inserting
+                # Producers can supply harvest dates, but cannot mark their
+                # own stock as safety-verified via the intake form.
+                harvest_date = (data.get("harvest_date") or "").strip() or None
+                if harvest_date:
+                    parsed_harvest_date = date.fromisoformat(harvest_date)
+                    if parsed_harvest_date > date.today():
+                        raise ValueError("Harvest date cannot be in the future.")
+
                 final_payload = {
+                    "harvest_date": harvest_date,
                     "producer_id": int(producer_id_raw),
                     "batch_number": data.get("batch_number"),
                     "product_name": data.get("product_name"),
@@ -335,6 +422,8 @@ class NativeAPIHandler(SimpleHTTPRequestHandler):
                 self.end_headers()
                 self.wfile.write(json.dumps({"status": "success"}).encode('utf-8'))
 
+            except ValueError as error:
+                self.send_json_result(400, {"message": str(error)})
             except Exception as e:
                 print(f"SYSTEM ERROR: Post-ingestion failure. {e}")
                 self.send_response(500)
