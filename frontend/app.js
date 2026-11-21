@@ -13,6 +13,32 @@ function escapeHtml(value) {
   })[char]);
 }
 
+function invalidateCheckoutAttempt() {
+  localStorage.removeItem("glh_checkout_key");
+}
+
+function showSystemFeedback(elementId, message, kind = "info") {
+  const target = document.getElementById(elementId);
+  if (!target) return;
+  target.textContent = message || "";
+  target.dataset.kind = kind;
+  target.hidden = !message;
+  target.setAttribute("role", kind === "error" ? "alert" : "status");
+}
+
+function readApiResponse(response) {
+  return response.json().catch(() => ({})).then((data) => {
+    if (!response.ok) {
+      const error = new Error(data.message || "Request failed. Please try again.");
+      error.status = response.status;
+      error.code = data.code;
+      error.details = data;
+      throw error;
+    }
+    return data;
+  });
+}
+
 function saveCart() {
   // writes the current cart array back to local storage
   localStorage.setItem("glh_cart", JSON.stringify(cart));
@@ -62,6 +88,7 @@ function addToCart(id, name, price, stock, requestedQuantity = 1, productMetadat
   } else {
     cart.push({ product_id: id, quantity, ...metadata });
   }
+  invalidateCheckoutAttempt();
   saveCart();
   return true;
 }
@@ -180,6 +207,7 @@ function populateShop(inventory, container) {
             </div>
           </div>
           <h2 class="box-title">${escapeHtml(item.product_name)}</h2>
+          ${item.product_description ? `<p class="product-description">${escapeHtml(item.product_description)}</p>` : ""}
           <span class="product-allergen">${formattedAllergens}</span>
           <span class="product-price">${formattedPrice}</span>
         </div>
@@ -278,153 +306,174 @@ function populateShop(inventory, container) {
 /* producer ledger node */
 
 function populateLedger(inventory, container) {
-  container.innerHTML = "";
-
+  container.replaceChildren();
   inventory.forEach((item) => {
-    // sets the status badge based on stock level
-    let status = "ACTIVE";
-    let badgeClass = "active";
-
-    if (item.stock_level === 0) {
-      status = "OUT OF STOCK";
-      badgeClass = "out-of-stock";
-    } else if (item.stock_level <= 20) {
-      status = "LOW STOCK";
-      badgeClass = "low-stock";
-    }
-
-    // builds and appends a table row for each product
     const row = document.createElement("tr");
+    const quantity = Number(item.stock_level) || 0;
+    const status = quantity <= 0 ? "OUT OF STOCK" : quantity <= 20 ? "LOW STOCK" : "ACTIVE";
+    const badgeClass = quantity <= 0 ? "out-of-stock" : quantity <= 20 ? "low-stock" : "active";
     row.innerHTML = `
-            <td class="sku-cell">${escapeHtml(item.batch_number)}</td>
-            <td class="name-cell">${escapeHtml(item.product_name)}</td>
-            <td class="data-cell">${escapeHtml(item.stock_level)}</td>
-            <td class="data-cell">£${parseFloat(item.price).toFixed(2)}</td>
-            <td class="data-cell">
-                <span class="status-badge ${badgeClass}">${status}</span>
-            </td>
-            <td class="action-cell">
-                <button class="ledger-remove-btn" onclick="deleteProduct(${item.product_id})">REMOVE</button>
-            </td>
-        `;
+      <td class="sku-cell">${escapeHtml(item.batch_number)}</td>
+      <td class="name-cell">${escapeHtml(item.product_name)}</td>
+      <td class="data-cell">${escapeHtml(item.stock_level)}</td>
+      <td class="data-cell">£${Number(item.price).toFixed(2)}</td>
+      <td class="data-cell"><span class="status-badge ${badgeClass}">${status}</span></td>
+      <td class="action-cell">
+        <div class="ledger-item-actions">
+          <button type="button" class="ledger-edit-btn">EDIT</button>
+          <button type="button" class="ledger-remove-btn">REMOVE</button>
+        </div>
+      </td>`;
+    row.querySelector(".ledger-edit-btn").addEventListener("click", () => openProductEditor(item));
+    row.querySelector(".ledger-remove-btn").addEventListener("click", () => deleteProduct(item.product_id));
     container.appendChild(row);
   });
 }
 
+function openProductEditor(item) {
+  const form = document.getElementById("product-edit-form");
+  if (!form) return;
+  form.hidden = false;
+  form.dataset.productId = String(item.product_id);
+  const set = (id, value) => { document.getElementById(id).value = value ?? ""; };
+  set("edit-product-name", item.product_name);
+  set("edit-product-batch", item.batch_number);
+  set("edit-product-price", Number(item.price).toFixed(2));
+  set("edit-product-stock", item.stock_level);
+  set("edit-product-description", item.product_description);
+  set("edit-product-harvest", item.harvest_date);
+  set("edit-product-allergens", item.allergen_info);
+  const title = document.getElementById("edit-product-title");
+  if (title) title.textContent = "Edit: " + item.product_name;
+  showSystemFeedback("product-edit-feedback", "", "info");
+  form.scrollIntoView({ behavior: "smooth", block: "center" });
+  document.getElementById("edit-product-name").focus({ preventScroll: true });
+}
+
+function closeProductEditor() {
+  const form = document.getElementById("product-edit-form");
+  if (!form) return;
+  form.hidden = true;
+  form.reset();
+  delete form.dataset.productId;
+  showSystemFeedback("product-edit-feedback", "");
+}
+
+const productEditForm = document.getElementById("product-edit-form");
+if (productEditForm) {
+  document.getElementById("edit-product-cancel")?.addEventListener("click", closeProductEditor);
+  productEditForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const productId = Number(productEditForm.dataset.productId);
+    if (!Number.isInteger(productId) || productId <= 0) return;
+    const saveButton = document.getElementById("edit-product-save");
+    if (saveButton.disabled) return;
+    const payload = {
+      product_name: document.getElementById("edit-product-name").value.trim(),
+      batch_number: document.getElementById("edit-product-batch").value.trim(),
+      price: Number(document.getElementById("edit-product-price").value),
+      stock_level: Number(document.getElementById("edit-product-stock").value),
+      harvest_date: document.getElementById("edit-product-harvest").value || null,
+      allergen_info: document.getElementById("edit-product-allergens").value.trim(),
+      product_description: document.getElementById("edit-product-description").value.trim()
+    };
+    if (!Number.isInteger(payload.stock_level) || payload.stock_level < 0) {
+      showSystemFeedback("product-edit-feedback", "Stock must be a non-negative whole number.", "error");
+      return;
+    }
+    saveButton.disabled = true;
+    saveButton.textContent = "SAVING…";
+    showSystemFeedback("product-edit-feedback", "");
+    try {
+      const result = await fetch("/products/" + encodeURIComponent(productId), {
+        method: "PUT", credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      }).then(readApiResponse);
+      closeProductEditor();
+      showSystemFeedback("ledger-feedback", result.message || "Changes saved to your product listing.", "success");
+      fetchInventoryData("/products");
+      if (typeof window.refreshProducerDashboard === "function") window.refreshProducerDashboard();
+    } catch (error) {
+      showSystemFeedback("product-edit-feedback",
+        error.status === 401 ? "Your producer session expired. Sign in again to edit products." :
+        error.message || "Unable to update this listing.", "error");
+    } finally {
+      saveButton.disabled = false;
+      saveButton.textContent = "SAVE CHANGES";
+    }
+  });
+}
 
 /* producer intake manifest form */
 
 const ledgerForm = document.getElementById("ledger-form");
 
 if (ledgerForm) {
-  ledgerForm.addEventListener("submit", function (event) {
+  ledgerForm.addEventListener("submit", async function (event) {
     event.preventDefault();
-
-    // checks that at least one allergen box is ticked before submitting
-    const allergenCheckboxes = document.querySelectorAll(
-      ".allergen-check:checked",
-    );
-    if (allergenCheckboxes.length === 0) {
-      alert(
-        "SYSTEM HALT: Regulatory compliance failure. Select at least one allergen.",
-      );
+    const selected = [...document.querySelectorAll(".allergen-check:checked")];
+    if (!selected.length) {
+      showSystemFeedback("ledger-feedback", "Select all applicable allergens or 'No Allergens Present' before saving.", "error");
       return;
     }
-
+    const none = selected.some(cb => cb.id === "no-allergens");
+    if (none && selected.length > 1) {
+      showSystemFeedback("ledger-feedback", "'No Allergens Present' cannot be combined with other allergens.", "error");
+      return;
+    }
+    const button = document.getElementById("commit-btn");
+    if (button.disabled) return;
     const formData = new FormData();
     const imageFile = document.getElementById("input-image").files[0];
-
-    // reads the producer id from the session so it gets stored with the product
-    const activeProducerId = localStorage.getItem("session_user_id") || 1;
-    formData.append("producer_id", activeProducerId);
-
-    formData.append(
-      "batch_number",
-      ledgerForm.querySelector('input[placeholder="e.g. BATCH-2026-X1"]').value,
-    );
-    formData.append(
-      "product_name",
-      ledgerForm.querySelector('input[placeholder="Product Descriptor"]').value,
-    );
-    formData.append(
-      "stock_level",
-      document.getElementById("input-stock").value,
-    );
+    formData.append("batch_number", ledgerForm.querySelector('input[placeholder="e.g. BATCH-2026-X1"]').value.trim());
+    formData.append("product_name", ledgerForm.querySelector('input[placeholder="Product Descriptor"]').value.trim());
+    formData.append("stock_level", document.getElementById("input-stock").value);
     formData.append("price", document.getElementById("input-price").value);
-
-    const harvestDate = document.getElementById("input-harvest-date");
-    if (harvestDate && harvestDate.value) {
-      formData.append("harvest_date", harvestDate.value);
+    formData.append("product_description", document.getElementById("input-description")?.value.trim() || "");
+    const harvest = document.getElementById("input-harvest-date");
+    if (harvest?.value) formData.append("harvest_date", harvest.value);
+    formData.append("allergen_info", selected.map(cb => cb.parentElement.textContent.trim()).join(", "));
+    if (imageFile) formData.append("product_image", imageFile);
+    button.disabled = true;
+    button.textContent = "SAVING PRODUCT…";
+    showSystemFeedback("ledger-feedback", "");
+    try {
+      const result = await fetch("/products", {
+        method: "POST", credentials: "same-origin", body: formData
+      }).then(readApiResponse);
+      ledgerForm.reset();
+      showSystemFeedback("ledger-feedback", "New product added to your inventory.", "success");
+      fetchInventoryData("/products");
+      if (typeof window.refreshProducerDashboard === "function") window.refreshProducerDashboard();
+    } catch (error) {
+      showSystemFeedback("ledger-feedback",
+        error.status === 401 ? "Your producer session expired. Sign in again to upload products." :
+        error.message || "Product could not be saved. Check the details and retry.", "error");
+    } finally {
+      button.disabled = false;
+      button.textContent = "COMMIT TO LEDGER";
     }
-
-    // joins the ticked allergen labels into a single comma separated string
-    let allergens = Array.from(allergenCheckboxes)
-      .map((cb) => cb.parentElement.textContent.trim())
-      .join(", ");
-    formData.append("allergen_info", allergens);
-
-    if (imageFile) {
-      formData.append("product_image", imageFile);
-    }
-
-    // posts the form data to the API as multipart
-    fetch("/products", {
-      method: "POST",
-      body: formData,
-    })
-      .then((response) => {
-        if (!response.ok) throw new Error("Server rejected the asset upload.");
-        return response.json();
-      })
-      .then((data) => {
-        alert("Stock and Visual Asset successfully committed.");
-        ledgerForm.reset();
-        // refreshes the ledger table to show the new entry
-        fetchInventoryData("/products");
-        if (typeof window.refreshProducerDashboard === "function") {
-          window.refreshProducerDashboard();
-        }
-      })
-      .catch((error) => {
-        console.error("POST ERROR:", error);
-        alert("SYSTEM HALT: Failed to commit stock. " + error.message);
-      });
   });
 }
 
 /* product deletion */
 
-function deleteProduct(productId) {
-  if (
-    !confirm(
-      `SYSTEM QUERY: Authorize permanent deletion of Product ID ${productId}?`,
-    )
-  )
-    return;
-
-  // sends a DELETE request to the API with the product id in the URL
-  fetch(`/products/${productId}`, {
-    method: "DELETE",
-    mode: "cors",
-  })
-    .then((response) => {
-      if (response.ok) {
-        console.log(`DELETION SUCCESS: ID ${productId} purged.`);
-        // reloads the ledger so the deleted row disappears straight away
-        fetchInventoryData("/products");
-        if (typeof window.refreshProducerDashboard === "function") {
-          window.refreshProducerDashboard();
-        }
-      } else {
-        throw new Error("Server rejected the purge request.");
-      }
-    })
-    .catch((error) => {
-      console.error("DELETION ERROR:", error);
-      alert("CRITICAL ERROR: Purge failed.");
-    });
+async function deleteProduct(productId) {
+  if (!confirm("Remove this product from your inventory? Existing orders will remain on record.")) return;
+  try {
+    const result = await fetch("/products/" + encodeURIComponent(productId), {
+      method: "DELETE", credentials: "same-origin"
+    }).then(readApiResponse);
+    showSystemFeedback("ledger-feedback", "Product removed from your inventory.", "success");
+    fetchInventoryData("/products");
+    if (typeof window.refreshProducerDashboard === "function") window.refreshProducerDashboard();
+  } catch (error) {
+    showSystemFeedback("ledger-feedback",
+      error.status === 401 ? "Your producer session expired. Sign in again to remove products." :
+      error.message || "Unable to remove this listing.", "error");
+  }
 }
-
 
 /* identity and authentication */
 
