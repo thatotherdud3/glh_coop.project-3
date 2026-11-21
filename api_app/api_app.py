@@ -3,6 +3,7 @@ import sqlite3
 import hashlib
 import os
 import re
+import secrets
 from datetime import date
 from urllib.parse import unquote, urlsplit
 from http.server import SimpleHTTPRequestHandler, HTTPServer
@@ -478,9 +479,22 @@ class NativeAPIHandler(SimpleHTTPRequestHandler):
 
         # product upload endpoint (multipart form data with an image file)
         elif self.path == '/products':
+            session_connection = get_db_connection()
+            try:
+                authenticated_producer_id = producer_from_request(
+                    session_connection, self.headers
+                )
+            finally:
+                session_connection.close()
+            if authenticated_producer_id is None:
+                self.send_json_result(401, {"message": "Producer sign-in required."})
+                return
             try:
                 content_type = self.headers.get('Content-Type')
                 content_length = int(self.headers.get('Content-Length'))
+                if content_length <= 0 or content_length > 6 * 1024 * 1024:
+                    self.send_json_result(413, {"message": "Upload exceeds 6 MB."})
+                    return
                 raw_body = self.rfile.read(content_length)
 
                 # parses the multipart form to separate text fields from the image
@@ -497,15 +511,22 @@ class NativeAPIHandler(SimpleHTTPRequestHandler):
                         # saves the uploaded image file to the assets folder
                         filename = part.get_filename()
                         if filename:
-                            image_filename = os.path.basename(filename)
+                            extension = os.path.splitext(filename)[1].lower()
+                            image_content = part.get_payload(decode=True) or b""
+                            valid_jpeg = extension in (".jpg", ".jpeg") and image_content.startswith(bytes.fromhex("ffd8ff"))
+                            valid_png = extension == ".png" and image_content.startswith(bytes.fromhex("89504e470d0a1a0a"))
+                            valid_webp = extension == ".webp" and image_content[:4] == b"RIFF" and image_content[8:12] == b"WEBP"
+                            if not (valid_jpeg or valid_png or valid_webp) or len(image_content) > 5 * 1024 * 1024:
+                                raise ValueError("Provide a PNG, JPG or WebP image no larger than 5 MB.")
+                            image_filename = secrets.token_hex(16) + extension
                             save_path = os.path.join(ASSET_DIR, image_filename)
-                            with open(save_path, 'wb') as f:
-                                f.write(part.get_payload(decode=True))
+                            with open(save_path, "xb") as target:
+                                target.write(image_content)
                     else:
                         # decodes all other text fields into the data dict
                         data[field_name] = part.get_payload(decode=True).decode('utf-8')
 
-                producer_id_raw = data.get("producer_id", 1)
+                producer_id_raw = authenticated_producer_id
 
                 # casts each field to the correct type before inserting
                 # Producers can supply harvest dates, but cannot mark their
@@ -516,13 +537,20 @@ class NativeAPIHandler(SimpleHTTPRequestHandler):
                     if parsed_harvest_date > date.today():
                         raise ValueError("Harvest date cannot be in the future.")
 
+                stock_level = int(data.get("stock_level", 0))
+                price = float(data.get("price", 0.0))
+                if stock_level < 0 or stock_level > 1000000 or not (0 <= price <= 100000):
+                    raise ValueError("Invalid stock quantity or unit price.")
+                if not (data.get("product_name") or "").strip():
+                    raise ValueError("Product name is required.")
+
                 final_payload = {
                     "harvest_date": harvest_date,
                     "producer_id": int(producer_id_raw),
                     "batch_number": data.get("batch_number"),
                     "product_name": data.get("product_name"),
-                    "stock_level": int(data.get("stock_level", 0)),
-                    "price": float(data.get("price", 0.0)),
+                    "stock_level": stock_level,
+                    "price": price,
                     "allergen_info": data.get("allergen_info"),
                     "product_image": image_filename
                 }
@@ -839,24 +867,33 @@ class NativeAPIHandler(SimpleHTTPRequestHandler):
             self.send_json_result(403, {"message": "Cross-site requests are not permitted."})
             return
         if self.path.startswith('/products/'):
+            connection = None
             try:
-                # pulls the product id out of the URL
                 product_id = int(self.path.split('/')[-1])
                 connection = get_db_connection()
-                cursor = connection.cursor()
-                # SQL delete statement to remove the product record
-                cursor.execute("DELETE FROM products WHERE product_id = ?", (product_id,))
+                producer_id = producer_from_request(connection, self.headers)
+                if producer_id is None:
+                    self.send_json_result(401, {"message": "Producer sign-in required."})
+                    return
+                changed = connection.execute(
+                    "DELETE FROM products WHERE product_id = ? AND producer_id = ?",
+                    (product_id, producer_id)
+                )
                 connection.commit()
-                connection.close()
-
-                print(f"DELETION LOG: ID {product_id} purged from SQLite.")
-                self.send_response(200)
-                self.send_header('Access-Control-Allow-Origin', '*')
-                self.end_headers()
-            except Exception as e:
-                print(f"DELETION ERROR: {e}")
-                self.send_response(500)
-                self.end_headers()
+                if changed.rowcount == 0:
+                    self.send_json_result(404, {
+                        "message": "Product was not found in your inventory."
+                    })
+                else:
+                    self.send_json_result(200, {"status": "success"})
+            except ValueError:
+                self.send_json_result(400, {"message": "Invalid product ID."})
+            except sqlite3.Error as error:
+                print(f"PRODUCT DELETE ERROR: {error}")
+                self.send_json_result(500, {"message": "Could not remove this product."})
+            finally:
+                if connection is not None:
+                    connection.close()
 
         elif self.path.startswith('/users/'):
             try:
