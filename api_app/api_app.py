@@ -158,15 +158,45 @@ class NativeAPIHandler(SimpleHTTPRequestHandler):
 
     def send_json_result(self, status_code, payload):
         body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
-        self.send_response(status_code)
-        self.send_header("Content-Type", "application/json; charset=utf-8")
-        self.send_header("Access-Control-Allow-Origin", "*")
-        self.send_header("Cache-Control", "no-store")
-        self.send_header("Content-Length", str(len(body)))
-        self.end_headers()
-        self.wfile.write(body)
+        try:
+            self.send_response(status_code)
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.send_header("Cache-Control", "no-store")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+        except (BrokenPipeError, ConnectionResetError):
+            # A closed browser tab must not cause a second 500 response attempt.
+            self.close_connection = True
 
     def do_GET(self):
+        if urlsplit(self.path).path == "/session":
+            connection = None
+            try:
+                connection = get_db_connection()
+                user_id = customer_from_request(connection, self.headers)
+                if user_id is None:
+                    user_id = producer_from_request(connection, self.headers)
+                if user_id is None:
+                    self.send_json_result(401, {"message": "Sign in to continue."})
+                    return
+                user = connection.execute(
+                    "SELECT user_id, full_name, role FROM users WHERE user_id = ?",
+                    (user_id,)
+                ).fetchone()
+                if user is None:
+                    self.send_json_result(401, {"message": "Session has expired."})
+                    return
+                self.send_json_result(200, dict(user))
+            except sqlite3.Error as error:
+                print(f"SESSION ERROR: {error}")
+                self.send_json_result(500, {"message": "Could not verify session."})
+            finally:
+                if connection is not None:
+                    connection.close()
+            return
+
         # Compatibility redirect: older cached navigation used /home.html.
         # The actual homepage is frontend/index.html.
         if urlsplit(self.path).path == "/home.html":

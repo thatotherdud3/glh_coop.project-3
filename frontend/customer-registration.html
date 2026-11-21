@@ -65,6 +65,7 @@
             <input
               type="text"
               id="customer-alias"
+              autocomplete="name"
               class="auth-input"
               placeholder="CREATE ALIAS"
               required
@@ -79,6 +80,7 @@
             <input
               type="email"
               id="customer-email"
+              autocomplete="email"
               class="auth-input"
               placeholder="user@domain.com"
               required
@@ -91,6 +93,8 @@
             <input
               type="password"
               id="passkey"
+              minlength="8"
+              autocomplete="new-password"
               class="auth-input"
               placeholder="• • • • • • • •"
               required
@@ -104,6 +108,8 @@
             <input
               type="password"
               id="passkey-confirm"
+              minlength="8"
+              autocomplete="new-password"
               class="auth-input"
               placeholder="• • • • • • • •"
               required
@@ -111,6 +117,8 @@
           </div>
 
           <button type="submit" class="auth-submit">ESTABLISH ACCOUNT</button>
+          <p id="registration-error" role="alert" aria-live="assertive" hidden
+             style="margin:18px 0;color:#a52828;font:600 13px/1.5 Helvetica,Arial,sans-serif;"></p>
 
           <div class="auth-footer-status">
             <span class="auth-mode" style="margin-bottom: 24px; display: block"
@@ -136,6 +144,6 @@
         <h2>TRACEABLE.<br />LOCAL.<br />VERIFIED.</h2>
       </div>
     </footer>
-    <script src="app.js?v=2"></script>.
+    <script src="app.js?v=glh-account-sessionfix-20261121"></script>
   </body>
 </html>
