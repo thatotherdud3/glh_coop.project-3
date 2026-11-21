@@ -536,10 +536,15 @@ class NativeAPIHandler(SimpleHTTPRequestHandler):
 
                 customer_id = payload.get("customer_id")
                 cart_items = payload.get("cart", [])
-                total_price = payload.get("total_price", 0.0)
+                submitted_total = payload.get("total_price", 0.0)
+                delivery_method = payload.get("delivery_method", "hub")
 
                 # wraps all three write operations in a single transaction
                 connection.execute("BEGIN TRANSACTION")
+                if delivery_method not in ("hub", "direct"):
+                    connection.rollback()
+                    self.send_json_result(400, {"message": "Invalid delivery method."})
+                    return
 
                 # Validate stock using DB values and snapshot prices for reporting.
                 if not isinstance(cart_items, list) or not cart_items:
@@ -567,8 +572,27 @@ class NativeAPIHandler(SimpleHTTPRequestHandler):
                         return
                     validated_items.append((product, quantity))
 
+                # Server-authoritative price calculation: £0 hub / £15 direct delivery.
+                # Compute from current database prices, not client-supplied totals.
+                subtotal_pence = sum(
+                    round(float(product["price"]) * 100) * quantity
+                    for product, quantity in validated_items
+                )
+                delivery_pence = 1500 if delivery_method == "direct" else 0
+                expected_total = (subtotal_pence + delivery_pence) / 100
+                try:
+                    provided_total = round(float(submitted_total), 2)
+                except (TypeError, ValueError):
+                    provided_total = None
+                if provided_total != expected_total:
+                    connection.rollback()
+                    self.send_json_result(409, {
+                        "message": "Order total changed. Refresh your cart to use current prices and delivery."
+                    })
+                    return
+
                 # step 2: SQL insert to create the master order record
-                cursor.execute("INSERT INTO orders (customer_id, total_price) VALUES (?, ?)", (customer_id, total_price))
+                cursor.execute("INSERT INTO orders (customer_id, total_price) VALUES (?, ?)", (customer_id, expected_total))
                 # captures the new order id to use as the foreign key in order_items
                 order_id = cursor.lastrowid
 

@@ -21,7 +21,7 @@ function updateCartCount() {
   });
 }
 
-function addToCart(id, name, price, stock, requestedQuantity = 1) {
+function addToCart(id, name, price, stock, requestedQuantity = 1, productMetadata = {}) {
   const available = Math.max(0, Math.floor(Number(stock) || 0));
   const quantity = Number(requestedQuantity);
   if (available <= 0) {
@@ -32,28 +32,29 @@ function addToCart(id, name, price, stock, requestedQuantity = 1) {
     alert("SYSTEM HALT: Select a valid quantity.");
     return false;
   }
-
   const existing = cart.find((item) => Number(item.product_id) === Number(id));
   const alreadyInCart = existing ? Number(existing.quantity) || 0 : 0;
   if (alreadyInCart + quantity > available) {
     alert(`SYSTEM HALT: Maximum available stock (${available}) reached. You already have ${alreadyInCart} in your cart.`);
     return false;
   }
-
+  // Keep the exact produce image, producer and trace data with the cart item.
+  const metadata = {
+    product_name: name,
+    price: Number(price),
+    max_stock: available,
+    product_image: productMetadata.product_image || existing?.product_image || "placeholder.png",
+    producer_name: productMetadata.producer_name || existing?.producer_name || "",
+    batch_number: productMetadata.batch_number || existing?.batch_number || "",
+    allergen_info: productMetadata.allergen_info || existing?.allergen_info || ""
+  };
   if (existing) {
+    Object.assign(existing, metadata);
     existing.quantity = alreadyInCart + quantity;
-    existing.max_stock = available;
   } else {
-    cart.push({
-      product_id: id,
-      product_name: name,
-      price: price,
-      quantity: quantity,
-      max_stock: available,
-    });
+    cart.push({ product_id: id, quantity, ...metadata });
   }
   saveCart();
-  console.log(`ASSET SECURED: ${quantity} x ${name} added to local cart.`);
   return true;
 }
 
@@ -243,7 +244,7 @@ function populateShop(inventory, container) {
         updateQuantityControls();
         return;
       }
-      if (addToCart(item.product_id, item.product_name, Number(item.price), stock, selected)) {
+      if (addToCart(item.product_id, item.product_name, Number(item.price), stock, selected, item)) {
         feedback.textContent = `${selected} UNIT${selected === 1 ? "" : "S"} ADDED TO CART`;
         quantityInput.value = "1";
         updateQuantityControls();
@@ -853,177 +854,206 @@ function submitUpdateDetails() {
 }
 
 
-/* cart page rendering */
+/* cart page — image synchronisation, quantity steppers and totals */
 
-function renderCartPage() {
-  const cartContainer = document.querySelector(".cart-items");
-  if (!cartContainer) return;
+const CART_DIRECT_DELIVERY_FEE = 15.00;
 
-  cartContainer.innerHTML = "";
-  let subtotal = 0;
-
-  if (cart.length === 0) {
-    // hides the cart grid to prevent an empty black gap from showing
-    const cartGrid = document.querySelector(".cart-grid");
-    if (cartGrid) cartGrid.style.display = "none";
-
-    // shows a clean message in place of the empty grid
-    let emptyMsg = document.getElementById("cart-empty-msg");
-    if (!emptyMsg) {
-      emptyMsg = document.createElement("p");
-      emptyMsg.id = "cart-empty-msg";
-      emptyMsg.style.cssText =
-        'font-family:"Courier New",monospace; font-size:13px; letter-spacing:.1em; color:#555; padding: 40px 0; border-top: 1px solid #111;';
-      emptyMsg.innerText = "CART MATRIX IS CURRENTLY EMPTY.";
-      cartGrid && cartGrid.parentNode.insertBefore(emptyMsg, cartGrid);
-    }
-    updateOrderSummary(0);
-    return;
-  }
-
-  // makes the grid visible again and removes the empty message
-  const cartGrid = document.querySelector(".cart-grid");
-  if (cartGrid) cartGrid.style.display = "";
-  const emptyMsg = document.getElementById("cart-empty-msg");
-  if (emptyMsg) emptyMsg.remove();
-
-  // builds a cart item row for each product in the array
-  cart.forEach((item, index) => {
-    const itemTotal = item.price * item.quantity;
-    subtotal += itemTotal;
-
-    const article = document.createElement("article");
-    article.className = "cart-item";
-
-    const formattedAllergen = item.allergen_info
-      ? `[ALLERGEN: ${item.allergen_info.toUpperCase()}]`
-      : "[NO ALLERGEN DATA]";
-    const producerName = item.producer_name
-      ? item.producer_name.toUpperCase()
-      : "GLH CO-OP";
-
-    article.innerHTML = `
-                <div class="item-media">
-                  <img src="assets/${item.product_image || "placeholder.png"}" alt="${item.product_name}" style="width:100%; height:100%; object-fit:cover; background:#e0e0e0;"/>
-                </div>
-                <div class="item-details">
-                  <h2 class="item-name">${item.product_name.toUpperCase()}</h2>
-                  <span class="item-allergen">${formattedAllergen}</span>
-                  <p class="item-farm">${producerName}</p>
-                </div>
-                <div class="item-metrics">
-                  <div class="metric-cell price">£${item.price.toFixed(2)}</div>
-                  <div class="metric-cell qty">
-                    <input type="number" value="${item.quantity}" min="1" max="${item.max_stock}" class="qty-input" onchange="updateItemQty(${index}, this.value)" style="width:100%; text-align:center; border:none; background:transparent; font-family:inherit;" />
-                  </div>
-                  <button class="metric-cell remove-btn" onclick="removeItem(${index})"> REMOVE </button>
-                </div>
-            `;
-    cartContainer.appendChild(article);
-  });
-
-  updateOrderSummary(subtotal);
+function formatCartCurrency(value) {
+  return Number(value).toLocaleString("en-GB", { style: "currency", currency: "GBP" });
 }
 
-function updateItemQty(index, newQty) {
-  const parsedQty = parseInt(newQty, 10);
+function calculateCartTotals() {
+  const subtotalPence = cart.reduce(
+    (sum, item) => sum + Math.round(Number(item.price || 0) * 100) * Number(item.quantity || 0), 0
+  );
+  const deliveryMethod = document.querySelector('input[name="delivery-method"]:checked')?.value || "hub";
+  const deliveryPence = cart.length && deliveryMethod === "direct" ? 1500 : 0;
+  return {
+    subtotal: subtotalPence / 100,
+    deliveryFee: deliveryPence / 100,
+    vat: 0,
+    total: (subtotalPence + deliveryPence) / 100,
+    deliveryMethod
+  };
+}
 
-  // caps the quantity at the max stock level
-  if (parsedQty > cart[index].max_stock) {
-    alert(
-      `SYSTEM HALT: Request exceeds available inventory. Maximum allowance is ${cart[index].max_stock} units.`,
-    );
-    cart[index].quantity = cart[index].max_stock;
-  } else if (parsedQty < 1) {
-    cart[index].quantity = 1;
-  } else {
-    cart[index].quantity = parsedQty;
+// Existing carts may pre-date the image metadata. Refresh it from the live
+// inventory API so cart pictures and Shop Produce use identical source files.
+async function refreshCartProductMetadata() {
+  if (!cart.length) return;
+  try {
+    const response = await fetch(`http://127.0.0.1:8000/products?t=${Date.now()}`, { cache: "no-store" });
+    if (!response.ok) throw new Error("Inventory unavailable");
+    const products = await response.json();
+    if (!Array.isArray(products)) throw new Error("Invalid inventory response");
+    const byId = new Map(products.map((product) => [Number(product.product_id), product]));
+    for (const entry of cart) {
+      const product = byId.get(Number(entry.product_id));
+      if (!product) continue;
+      entry.product_name = product.product_name;
+      entry.price = Number(product.price);
+      entry.max_stock = Math.max(0, Math.floor(Number(product.stock_level) || 0));
+      entry.product_image = product.product_image || "placeholder.png";
+      entry.producer_name = product.producer_name || "";
+      entry.batch_number = product.batch_number || "";
+      entry.allergen_info = product.allergen_info || "";
+    }
+    saveCart();
+    renderCartPage();
+  } catch (error) {
+    console.warn("Unable to refresh cart product details:", error);
   }
+}
+
+function renderCartPage() {
+  const container = document.querySelector(".cart-items");
+  if (!container) return;
+  container.replaceChildren();
+  if (cart.length === 0) {
+    const empty = document.createElement("p");
+    empty.className = "cart-empty-message";
+    empty.textContent = "YOUR CART IS CURRENTLY EMPTY.";
+    container.appendChild(empty);
+    updateOrderSummary();
+    return;
+  }
+  cart.forEach((item, index) => {
+    const article = document.createElement("article");
+    article.className = "cart-item";
+    article.innerHTML = `
+      <div class="item-media"><img loading="lazy" alt=""></div>
+      <div class="item-details">
+        <span class="item-farm"></span>
+        <h2 class="item-name"></h2>
+        <span class="item-batch"></span>
+        <span class="item-allergen"></span>
+      </div>
+      <div class="item-metrics">
+        <div class="metric-cell price">
+          <span class="cart-metric-label">PRICE</span>
+          <span class="cart-unit-price"></span>
+        </div>
+        <div class="metric-cell qty">
+          <span class="cart-metric-label">QTY</span>
+          <div class="cart-qty-buttons">
+            <button type="button" class="cart-qty-step cart-decrease">−</button>
+            <span class="cart-qty-value"></span>
+            <button type="button" class="cart-qty-step cart-increase">+</button>
+          </div>
+        </div>
+        <button type="button" class="metric-cell remove-btn">REMOVE</button>
+      </div>
+    `;
+    const image = article.querySelector(".item-media img");
+    image.src = resolveProductImageUrl(item.product_image);
+    image.alt = item.product_name || "Produce";
+    image.addEventListener("error", () => {
+      if (!image.src.endsWith("/assets/placeholder.png")) image.src = "assets/placeholder.png";
+    });
+    article.querySelector(".item-farm").textContent = (item.producer_name || "GLH CO-OP").toUpperCase();
+    article.querySelector(".item-name").textContent = item.product_name || "Produce";
+    article.querySelector(".item-batch").textContent = item.batch_number || "";
+    const allergen = String(item.allergen_info || "").trim();
+    article.querySelector(".item-allergen").textContent =
+      allergen && !/^no allergens? present$/i.test(allergen) ? `ALLERGENS: ${allergen.toUpperCase()}` : "";
+    article.querySelector(".cart-unit-price").textContent = formatCartCurrency(item.price);
+
+    const quantity = Math.max(1, Math.floor(Number(item.quantity) || 1));
+    const maxStock = Math.max(0, Math.floor(Number(item.max_stock) || 0));
+    article.querySelector(".cart-qty-value").textContent = String(quantity);
+    const minus = article.querySelector(".cart-decrease");
+    const plus = article.querySelector(".cart-increase");
+    minus.setAttribute("aria-label", `Decrease quantity of ${item.product_name}`);
+    plus.setAttribute("aria-label", `Increase quantity of ${item.product_name}`);
+    minus.disabled = quantity <= 1;
+    plus.disabled = quantity >= maxStock;
+    minus.addEventListener("click", () => updateItemQty(index, quantity - 1));
+    plus.addEventListener("click", () => updateItemQty(index, quantity + 1));
+    article.querySelector(".remove-btn").addEventListener("click", () => removeItem(index));
+    container.appendChild(article);
+  });
+  updateOrderSummary();
+}
+
+function updateItemQty(index, requestedQty) {
+  const item = cart[index];
+  if (!item) return;
+  const maxStock = Math.max(1, Math.floor(Number(item.max_stock) || 1));
+  const requested = Number(requestedQty);
+  if (!Number.isInteger(requested)) return;
+  item.quantity = Math.min(Math.max(requested, 1), maxStock);
   saveCart();
   renderCartPage();
 }
 
 function removeItem(index) {
-  // removes the item from the cart array and re-renders the page
   cart.splice(index, 1);
   saveCart();
   renderCartPage();
 }
 
-function updateOrderSummary(subtotal) {
-  const summaryTable = document.querySelector(".summary-totals");
-  if (!summaryTable) return;
-
-  // reads which delivery option is selected and adds the fee if needed
-  const deliveryMethod = document.querySelector(
-    'input[name="delivery-method"]:checked',
-  ).value;
-  const deliveryFee = deliveryMethod === "direct" ? 5.0 : 0.0;
-
-  const vat = subtotal * 0.0;
-  const total = subtotal + vat + deliveryFee;
-
-  // writes the calculated values to the four numeric cells in the summary table
-  const numericCells = summaryTable.querySelectorAll(".numeric");
-  if (numericCells.length === 4) {
-    numericCells[0].innerText = `£ ${subtotal.toFixed(2)}`;
-    numericCells[1].innerText = `£ ${vat.toFixed(2)}`;
-    numericCells[2].innerText = `£ ${deliveryFee.toFixed(2)}`;
-    numericCells[3].innerText = `£ ${total.toFixed(2)}`;
+function updateOrderSummary() {
+  const table = document.querySelector(".summary-totals");
+  if (!table) return;
+  const { subtotal, deliveryFee, vat, total } = calculateCartTotals();
+  const numeric = table.querySelectorAll(".numeric");
+  if (numeric.length === 3) {
+    numeric[0].textContent = formatCartCurrency(subtotal);
+    numeric[1].textContent = formatCartCurrency(deliveryFee);
+    numeric[2].textContent = formatCartCurrency(vat);
   }
+  const totalLabel = document.querySelector(".cart-ledger-amount");
+  if (totalLabel) totalLabel.textContent = formatCartCurrency(total);
+  const stockIssue = cart.some((item) =>
+    Number(item.quantity) < 1 || Number(item.quantity) > Number(item.max_stock)
+  );
+  const warning = document.querySelector(".cart-stock-message");
+  if (warning) warning.hidden = !stockIssue;
+  const button = document.querySelector(".cart-submit");
+  if (button) button.disabled = !cart.length || stockIssue;
 }
 
 function initiateCheckout() {
   const userId = localStorage.getItem("session_user_id");
-
-  // blocks the checkout if the user isnt logged in
   if (!userId) {
-    alert(
-      "SYSTEM LOG: Authentication required to execute transaction. Routing to Customer Node.",
-    );
+    alert("SYSTEM LOG: Authentication required to execute transaction. Routing to Customer Node.");
     window.location.href = "customer-login.html";
     return;
   }
-
-  if (cart.length === 0) {
+  if (!cart.length) {
     alert("SYSTEM HALT: Cannot process an empty ledger.");
     return;
   }
-
-  // reads the grand total from the summary table to pass to the API
-  const totalString = document
-    .querySelectorAll(".summary-totals .numeric")[3]
-    .innerText.replace("£", "")
-    .trim();
-  const finalTotal = parseFloat(totalString);
-
-  // sends the cart and total to the checkout endpoint
+  if (cart.some((item) => Number(item.quantity) < 1 || Number(item.quantity) > Number(item.max_stock))) {
+    alert("SYSTEM HALT: Some products exceed available stock. Please adjust your cart.");
+    return;
+  }
+  const { total, deliveryMethod } = calculateCartTotals();
   fetch("http://127.0.0.1:8000/checkout", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      customer_id: userId,
-      cart: cart,
-      total_price: finalTotal,
-    }),
+    body: JSON.stringify({ customer_id: userId, cart, delivery_method: deliveryMethod, total_price: total })
   })
-    .then((res) => res.json())
+    .then(async (response) => {
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || "Checkout was rejected.");
+      return data;
+    })
     .then((data) => {
       if (data.status === "success") {
-        alert(
-          `TRANSACTION COMPLETE: Order Ref #${data.order_id} committed to ledger.`,
-        );
-        // clears the cart and sends the user to their portal
+        alert(`TRANSACTION COMPLETE: Order Ref #${data.order_id} committed to ledger.`);
         cart = [];
         saveCart();
         window.location.href = "customer-portal.html";
       } else {
-        alert(`SYSTEM ERROR: ${data.message}`);
+        alert(`SYSTEM ERROR: ${data.message || "Unable to complete transaction."}`);
       }
     })
-    .catch((err) => console.error("CHECKOUT ERROR:", err));
+    .catch((error) => {
+      console.error("CHECKOUT ERROR:", error);
+      alert(`SYSTEM ERROR: ${error.message}`);
+    });
 }
-
 
 /* customer portal order history */
 
@@ -1092,6 +1122,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   if (page === "cart.html") {
     renderCartPage();
+    refreshCartProductMetadata();
 
     // recalculates the order total when the delivery option changes
     const deliveryToggles = document.querySelectorAll(
