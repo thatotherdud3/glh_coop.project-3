@@ -433,50 +433,77 @@ let isLoginMode = document.getElementById("user-id");
 let isRegistrationMode = document.getElementById("passkey-confirm");
 
 if (authFormObj) {
-  authFormObj.addEventListener("submit", function (event) {
+  authFormObj.addEventListener("submit", async function (event) {
     event.preventDefault();
 
-    // registration path
+    // registration path: one submission, meaningful validation messages and
+    // no stale customer identity carried over from a previous login.
     if (isRegistrationMode) {
-      const fullName = document.getElementById("customer-alias").value;
-      const email = document.getElementById("customer-email").value;
+      const fullName = document.getElementById("customer-alias").value.trim();
+      const email = document.getElementById("customer-email").value.trim();
       const password = document.getElementById("passkey").value;
       const confirmPassword = document.getElementById("passkey-confirm").value;
-
-      // validates both passkey fields match before sending to the API
-      if (password !== confirmPassword) {
-        alert("SYSTEM HALT: Passkeys do not match. Verification failed.");
+      const submitButton = authFormObj.querySelector('button[type="submit"]');
+      const errorSlot = document.getElementById("registration-error");
+      const showRegistrationError = (message) => {
+        if (errorSlot) {
+          errorSlot.hidden = !message;
+          errorSlot.textContent = message || "";
+        }
+      };
+      showRegistrationError("");
+      if (!fullName || !email) {
+        showRegistrationError("Enter your name and email address.");
         return;
       }
+      if (password.length < 8) {
+        showRegistrationError("Your passkey must contain at least 8 characters.");
+        return;
+      }
+      if (password !== confirmPassword) {
+        showRegistrationError("The two passkeys do not match.");
+        return;
+      }
+      if (submitButton.disabled) return;
+      submitButton.disabled = true;
+      const originalLabel = submitButton.textContent;
+      submitButton.textContent = "CREATING ACCOUNT…";
+      try {
+        const response = await fetch("/register", {
+          method: "POST",
+          credentials: "same-origin",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            full_name: fullName, email, password, role: "customer"
+          }),
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok || data.status !== "success") {
+          throw new Error(data.message || "Registration failed. Please try again.");
+        }
 
-      console.log(`SYSTEM LOG: Initiating registration for [${email}]...`);
-
-      fetch("/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          full_name: fullName,
-          email: email,
-          password: password,
-          role: "customer",
-        }),
-      })
-        .then((res) => {
-          if (!res.ok && res.status !== 409) throw new Error("Server failure.");
-          return res.json();
-        })
-        .then((data) => {
-          if (data.status === "success") {
-            alert(
-              "Account successfully established. Proceeding to authentication portal.",
-            );
-            // redirects to the login page after successfull registration
-            window.location.href = "customer-login.html";
-          } else {
-            alert(`SYSTEM HALT: Registration Denied. ${data.message}`);
-          }
-        })
-        .catch((err) => console.error("REG ERROR:", err));
+        // Registration does not sign in the new customer. End any previous
+        // account's cookie session before routing to the login screen.
+        try {
+          await fetch("/producer/logout", {
+            method: "POST", credentials: "same-origin"
+          });
+        } catch (error) {
+          console.warn("Could not clear earlier session cookie:", error);
+        }
+        for (const key of [
+          "session_user_id", "session_role", "session_full_name",
+          "session_producer_token"
+        ]) localStorage.removeItem(key);
+        // Preserve the guest shopping cart for checkout after sign-in.
+        window.location.replace("customer-login.html?registered=1");
+      } catch (error) {
+        console.error("REGISTRATION ERROR:", error);
+        showRegistrationError(error.message || "Unable to create your account.");
+      } finally {
+        submitButton.disabled = false;
+        submitButton.textContent = originalLabel;
+      }
     }
 
     // login path
@@ -554,10 +581,8 @@ function initSessionUI() {
   const page = window.location.pathname.split("/").pop() || "index.html";
 
   // page guards: bounce unauthenticated users back to login
-  if (page === "customer-portal.html" && (!userId || role !== "customer")) {
-    window.location.href = "customer-login.html";
-    return;
-  }
+  // Customer Portal verifies its identity through /session, not localStorage.
+  // Using a stale browser ID here can cause a redirect or order-history loop.
   if (page === "producer-portal.html" && (!userId || role !== "producer")) {
     // The backend authenticates dashboard requests with its signed cookie;
     // an absent localStorage token is not a reason to bounce the page.
@@ -1124,17 +1149,21 @@ function initiateCheckout() {
 
 /* customer portal order history */
 
-function loadOrderHistory() {
+function loadOrderHistory(authenticatedCustomerId) {
   const tbody = document.getElementById("order-history-body");
   if (!tbody) return;
 
-  const userId = localStorage.getItem("session_user_id");
-  if (!userId) return;
+  const userId = Number(authenticatedCustomerId);
+  if (!Number.isInteger(userId) || userId <= 0) return;
 
   // fetches all orders for the logged in customer from the API
-  fetch(`/orders/${userId}`)
-    .then((res) => res.json())
+  fetch(`/orders/${userId}`, { credentials: "same-origin", cache: "no-store" })
+    .then((res) => {
+      if (!res.ok) throw new Error("Order history request was rejected (" + res.status + ").");
+      return res.json();
+    })
     .then((orders) => {
+      if (!Array.isArray(orders)) throw new Error("Invalid order history response.");
       tbody.innerHTML = "";
       if (orders.length === 0) {
         tbody.innerHTML =
@@ -1168,6 +1197,44 @@ function loadOrderHistory() {
 }
 
 
+async function initCustomerPortal() {
+  // Use the signed HttpOnly cookie as the single source of identity.
+  // A different browser's old localStorage value must never select an account.
+  const status = document.getElementById("order-history-body");
+  if (!status) return;
+  try {
+    const response = await fetch("/session", {
+      method: "GET", credentials: "same-origin", cache: "no-store"
+    });
+    if (!response.ok) {
+      if (response.status === 401) {
+        for (const key of [
+          "session_user_id", "session_role", "session_full_name",
+          "session_producer_token"
+        ]) localStorage.removeItem(key);
+        window.location.replace("customer-login.html?session=expired");
+        return;
+      }
+      throw new Error("Unable to verify customer session (" + response.status + ").");
+    }
+    const user = await response.json();
+    if (user.role !== "customer") {
+      window.location.replace("customer-login.html?session=customer-required");
+      return;
+    }
+    localStorage.setItem("session_user_id", String(user.user_id));
+    localStorage.setItem("session_role", "customer");
+    localStorage.setItem("session_full_name", user.full_name || "");
+    const welcome = document.getElementById("welcome-title");
+    if (welcome) welcome.textContent = "Welcome Back, " +
+      (user.full_name || "Member").split(" ")[0] + ".";
+    loadOrderHistory(user.user_id);
+  } catch (error) {
+    console.error("CUSTOMER SESSION ERROR:", error);
+    status.innerHTML = '<tr><td colspan="5">Unable to verify your session. Please reload or sign in again.</td></tr>';
+  }
+}
+
 /* single DOMContentLoaded entry point */
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -1184,7 +1251,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   if (page === "customer-portal.html") {
-    loadOrderHistory();
+    initCustomerPortal();
   }
 
   if (page === "cart.html") {
