@@ -209,6 +209,46 @@ class SecurityWorkflowTests(unittest.TestCase):
         self.assertEqual(code, 200)
         self.assertEqual(orders, [])
 
+    def test_customer_login_cookie_can_checkout_and_read_own_orders(self):
+        """Customer-node sign-in must authorise the same user's order ledger."""
+        status, login, headers = self.send("POST", "/login", payload={
+            "email": "customer@glh.test", "password": "secure123",
+            "requested_node": "customer",
+        })
+        self.assertEqual(status, 200, login)
+        self.assertEqual(login["role"], "customer")
+        cookie = next(
+            value.split(";", 1)[0]
+            for value in headers.get_all("Set-Cookie", [])
+            if value.startswith("glh_customer_session=")
+        )
+        session_status, user, _ = self.send("GET", "/session", cookie_header=cookie)
+        self.assertEqual(session_status, 200, user)
+        self.assertEqual((user["user_id"], user["role"]), (1, "customer"))
+        self.assertEqual(self.send("GET", "/orders/1", cookie_header=cookie)[0], 200)
+        self.assertEqual(self.send("GET", "/orders/4", cookie_header=cookie)[0], 403)
+        self.assertEqual(
+            self.send("GET", "/producer/dashboard", cookie_header=cookie)[0], 401
+        )
+        checkout_status, order, _ = self.send("POST", "/checkout", payload={
+            "delivery_method": "hub",
+            "collection_node_code": "ND-01",
+            "total_price": 6,
+            "cart": [{"product_id": 11, "quantity": 2}],
+            "checkout_key": "customer-login-flow-0001",
+        }, cookie_header=cookie)
+        self.assertEqual(checkout_status, 201, order)
+        status, history, _ = self.send("GET", "/orders/1", cookie_header=cookie)
+        self.assertEqual(status, 200, history)
+        self.assertEqual(len(history), 1)
+        self.assertEqual(history[0]["order_id"], order["order_id"])
+        self.assertEqual(
+            self.send(
+                "GET", f"/orders/{order['order_id']}/confirmation",
+                cookie_header=cookie
+            )[0], 200
+        )
+
     def test_producer_login_can_switch_nodes_and_complete_checkout(self):
         """The exact same cookie works at both producer and customer nodes."""
         payload = {
