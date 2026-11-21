@@ -292,6 +292,78 @@ class NativeAPIHandler(SimpleHTTPRequestHandler):
                 self.send_response(500)
                 self.end_headers()
 
+        elif re.fullmatch(r"/orders/[0-9]+/confirmation", urlsplit(self.path).path):
+            # A private receipt for one order, restricted to the customer
+            # authenticated by their signed HttpOnly session.
+            connection = None
+            try:
+                order_id = int(urlsplit(self.path).path.split("/")[2])
+                connection = get_db_connection()
+                customer_id = customer_from_request(connection, self.headers)
+                if customer_id is None:
+                    self.send_json_result(401, {
+                        "message": "Please sign in as a customer to view your order."
+                    })
+                    return
+                order = connection.execute("""
+                    SELECT order_id, order_time, total_price,
+                           delivery_method, collection_node_code,
+                           delivery_address_json
+                    FROM orders
+                    WHERE order_id = ? AND customer_id = ?
+                """, (order_id, customer_id)).fetchone()
+                if order is None:
+                    self.send_json_result(404, {"message": "Order not found."})
+                    return
+                lines = connection.execute("""
+                    SELECT oi.item_id, oi.quantity,
+                           COALESCE(oi.product_name, p.product_name, 'Product unavailable')
+                               AS product_name,
+                           COALESCE(oi.unit_price, p.price, 0) AS unit_price,
+                           COALESCE(p.product_image, 'placeholder.png') AS product_image,
+                           COALESCE(u.full_name, 'GLH CO-OP') AS producer_name,
+                           oi.fulfilled_at
+                    FROM order_items oi
+                    LEFT JOIN products p ON p.product_id = oi.product_id
+                    LEFT JOIN users u ON u.user_id = COALESCE(oi.producer_id, p.producer_id)
+                    WHERE oi.order_id = ?
+                    ORDER BY oi.item_id
+                """, (order_id,)).fetchall()
+                product_lines = [{
+                    "product_name": item["product_name"],
+                    "quantity": item["quantity"],
+                    "unit_price": round(item["unit_price"], 2),
+                    "line_total": round(item["unit_price"] * item["quantity"], 2),
+                    "product_image": item["product_image"],
+                    "producer_name": item["producer_name"],
+                    "fulfilled": bool(item["fulfilled_at"]),
+                } for item in lines]
+                delivery_fee = 15.00 if order["delivery_method"] == "direct" else 0.00
+                address = (json.loads(order["delivery_address_json"])
+                           if order["delivery_address_json"] else None)
+                self.send_json_result(200, {
+                    "order_id": order["order_id"],
+                    "order_time": order["order_time"],
+                    "total_price": round(order["total_price"], 2),
+                    "delivery_fee": delivery_fee,
+                    "delivery_method": order["delivery_method"],
+                    "collection_node_code": order["collection_node_code"],
+                    "delivery_address": address,
+                    "payment_status": "NOT_PROCESSED",
+                    "fulfilment_status": (
+                        "Fulfilled" if product_lines and all(
+                            line["fulfilled"] for line in product_lines
+                        ) else "Pending"
+                    ),
+                    "items": product_lines
+                })
+            except (sqlite3.Error, ValueError, TypeError) as error:
+                print(f"ORDER CONFIRMATION ERROR: {error}")
+                self.send_json_result(500, {"message": "Unable to retrieve order details."})
+            finally:
+                if connection is not None:
+                    connection.close()
+
         elif self.path.startswith('/orders/'):
             try:
                 # pulls the customer id from the URL to filter their orders
