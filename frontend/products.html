@@ -52,6 +52,16 @@
       <h1>Shop Produce</h1>
     </header>
 
+    <section class="shop-search-panel" role="search" aria-label="Search produce listings">
+      <div class="shop-search-inner">
+        <label for="shop-search">SEARCH INVENTORY</label>
+        <input id="shop-search" type="search" autocomplete="off"
+               placeholder="Search produce, producer or batch..."
+               aria-describedby="shop-search-count" />
+        <p id="shop-search-count" role="status" aria-live="polite">LOADING INVENTORY…</p>
+      </div>
+    </section>
+
     <main class="product-grid shop-produce-grid" id="shop-inventory-grid"></main>
 
     <footer class="massive-footer">
