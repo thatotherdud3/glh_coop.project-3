@@ -2,7 +2,7 @@
 .cart-page .cart-visually-hidden{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}
 .cart-page .cart-container{padding:0;max-width:none}
 .cart-page .cart-grid{display:grid;grid-template-columns:minmax(0,2fr) minmax(350px,1fr)!important;align-items:stretch;gap:0;min-height:72vh;background:#fbfbf9;border:0;border-top:1px solid #111}
-.cart-page .cart-lines{display:flex;flex-direction:column;min-width:0;border-right:1px solid #111}
+.cart-page .cart-lines{display:flex;flex-direction:column;min-width:0;border-right:1px solid #111;background:#fbfbf9}
 .cart-page .cart-items{display:flex;flex-direction:column;gap:0;background:#fbfbf9}
 .cart-page .cart-item{display:grid;grid-template-columns:minmax(160px,25%) minmax(0,1fr) 125px!important;min-height:250px;gap:0;background:#fbfbf9;border-bottom:1px solid #111}
 .cart-page .item-media{position:relative;height:100%;min-height:250px;aspect-ratio:auto;overflow:hidden;border-right:1px solid #111;background:#e0e0e0}
@@ -55,3 +55,5 @@
 @media(max-width:1100px){.cart-page .cart-grid{grid-template-columns:minmax(0,1fr) minmax(305px,36%)!important}.cart-page .cart-item{grid-template-columns:minmax(140px,30%) minmax(0,1fr) 108px!important}.cart-page .item-details{padding:24px}.cart-page .order-summary{padding:32px 26px 42px}}
 @media(max-width:850px){.cart-page .cart-grid{grid-template-columns:1fr!important}.cart-page .cart-lines{border-right:0}.cart-page .order-summary{border-top:1px solid #111;padding:42px 6% 60px}.cart-page .cart-item{grid-template-columns:28% minmax(0,1fr) 125px!important}}
 @media(max-width:560px){.cart-page .cart-item{grid-template-columns:minmax(130px,37%) minmax(0,1fr)!important;grid-template-rows:minmax(200px,auto) 75px;min-height:0}.cart-page .item-media{min-height:200px}.cart-page .item-details{padding:20px 16px}.cart-page .item-name{font-size:clamp(24px,6vw,34px)}.cart-page .item-farm{font-size:9px}.cart-page .item-metrics{grid-column:1/-1;display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:75px;border-top:1px solid #111;border-left:0}.cart-page .metric-cell{border-bottom:0;border-right:1px solid #111}.cart-page .metric-cell:last-child{border-right:0}.cart-page .order-summary{padding:35px 24px 52px}.cart-page .cart-continue-link{margin:28px 24px 48px}.cart-page .cart-ledger-amount{font-size:clamp(35px,11vw,52px)}}
+/* Keep unused vertical space beneath short carts light, never the old black gutter. */
+.cart-page .cart-lines,.cart-page .cart-items,.cart-page .cart-grid{background-color:#fbfbf9}
