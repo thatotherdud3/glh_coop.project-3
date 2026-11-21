@@ -450,6 +450,7 @@ function initSessionUI() {
   const userId = localStorage.getItem("session_user_id");
   const role = localStorage.getItem("session_role");
   const name = localStorage.getItem("session_full_name");
+  const producerToken = localStorage.getItem("session_producer_token");
   const page = window.location.pathname.split("/").pop() || "index.html";
 
   // page guards: bounce unauthenticated users back to login
@@ -457,8 +458,17 @@ function initSessionUI() {
     window.location.href = "customer-login.html";
     return;
   }
-  if (page === "producer-portal.html" && role !== "producer") {
-    window.location.href = "producer-login.html";
+  if (
+    page === "producer-portal.html" &&
+    (!userId || role !== "producer" || !producerToken)
+  ) {
+    // An old browser session without the new signed producer token
+    // must sign in again. Do not loop between the two pages.
+    localStorage.removeItem("session_user_id");
+    localStorage.removeItem("session_role");
+    localStorage.removeItem("session_full_name");
+    localStorage.removeItem("session_producer_token");
+    window.location.replace("producer-login.html");
     return;
   }
 
@@ -468,8 +478,15 @@ function initSessionUI() {
     return;
   }
   if (page === "producer-login.html" && userId && role === "producer") {
-    window.location.href = "producer-portal.html";
-    return;
+    if (producerToken) {
+      window.location.replace("producer-portal.html");
+      return;
+    }
+    // Stale session: retain the login form instead of redirecting to
+    // the producer portal without valid credentials.
+    localStorage.removeItem("session_user_id");
+    localStorage.removeItem("session_role");
+    localStorage.removeItem("session_full_name");
   }
 
   // injects the logout button into the nav if the user is logged in
