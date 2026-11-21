@@ -133,6 +133,11 @@ function initShopSearch() {
 function showInventoryError(url) {
   const shopGrid = document.getElementById("shop-inventory-grid");
   if (shopGrid) {
+    shopInventory = [];
+    const search = document.getElementById("shop-search");
+    const sort = document.getElementById("shop-sort");
+    if (search) search.disabled = true;
+    if (sort) sort.disabled = true;
     shopGrid.replaceChildren();
     const section = document.createElement("section");
     section.className = "shop-inventory-error";
@@ -158,7 +163,9 @@ function showInventoryError(url) {
 }
 
 function buildAllergenDeclaration(ingredientAllergens, possibleContact = "") {
-  const contains = String(ingredientAllergens || "").trim();
+  const source = String(ingredientAllergens || "").trim();
+  const contains = /^(none|no allergens? present)$/i.test(source)
+    ? "None of the listed allergens" : source;
   const contact = String(possibleContact || "").trim();
   if (!contains) throw new Error("Declare the allergens used as ingredients or confirm none are used.");
   if (contains.toLowerCase().startsWith("none of the listed allergens") &&
@@ -197,6 +204,10 @@ function distributeData(inventory) {
 
   if (shopGrid) {
     shopInventory = Array.isArray(inventory) ? inventory : [];
+    const search = document.getElementById("shop-search");
+    const sort = document.getElementById("shop-sort");
+    if (search) search.disabled = false;
+    if (sort) sort.disabled = false;
     renderShopSearch();
   }
   if (ledgerTable) {
