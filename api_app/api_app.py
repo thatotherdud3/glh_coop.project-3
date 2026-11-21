@@ -752,9 +752,10 @@ class NativeAPIHandler(SimpleHTTPRequestHandler):
             except ValueError as error:
                 self.send_json_result(400, {"message": str(error)})
             except Exception as e:
-                print(f"SYSTEM ERROR: Post-ingestion failure. {e}")
-                self.send_response(500)
-                self.end_headers()
+                print(f"PRODUCT UPLOAD ERROR: {e}")
+                self.send_json_result(500, {
+                    "message": "Unable to save the product. Check the uploaded image and try again."
+                })
 
         # atomic checkout endpoint
         elif self.path == '/checkout':
