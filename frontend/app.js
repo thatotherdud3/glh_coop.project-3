@@ -786,8 +786,59 @@ async function deleteAccount() {
 const COOKIE_CONSENT_KEY = "glh_cookie_consent_v1";
 
 function initConsentWall() {
-  const overlay = document.getElementById("consent-intercept");
-  if (!overlay) return;
+  let overlay = document.getElementById("consent-intercept");
+  // The homepage contains the editorial consent markup. Other entry pages
+  // receive the same popup so first-time visitors see it before opting in.
+  if (!overlay) {
+    overlay = document.createElement("div");
+    overlay.id = "consent-intercept";
+    overlay.className = "intercept-overlay";
+    overlay.setAttribute("role", "dialog");
+    overlay.setAttribute("aria-modal", "true");
+    overlay.setAttribute("aria-labelledby", "consent-title");
+    overlay.style.display = "none";
+    overlay.innerHTML = `
+      <div class="intercept-modal">
+        <div class="intercept-header">
+          <span class="system-label text-blue">[GREENFIELD_DATA_PROTOCOL_]</span>
+          <h2 class="intercept-title" id="consent-title">We Value Your Privacy</h2>
+        </div>
+        <div class="intercept-body">
+          <p>GLH CO-OP uses essential browser storage and cookies for the cart
+          and secure account sessions. Optional analytics and marketing remain
+          off unless you opt in.</p>
+          <p>Your preference stays saved in this browser across account
+          changes. This demo does not currently enable third-party analytics
+          or marketing.</p>
+        </div>
+        <form class="intercept-form" id="consent-form">
+          <div class="consent-options">
+            <label class="allergen-checkbox"><input type="checkbox" checked disabled>
+              <span class="custom-box"></span> STRICTLY NECESSARY</label>
+            <label class="allergen-checkbox"><input type="checkbox" id="consent-analytics">
+              <span class="custom-box"></span> ANALYTICS &amp; PERFORMANCE</label>
+            <label class="allergen-checkbox"><input type="checkbox" id="consent-marketing">
+              <span class="custom-box"></span> MARKETING &amp; LOYALTY</label>
+          </div>
+          <div class="intercept-actions">
+            <button type="button" class="system-btn ghost-btn" id="reject-optional-btn">REJECT OPTIONAL</button>
+            <button type="submit" class="system-btn ghost-btn">ACCEPT SELECTED</button>
+            <button type="button" class="system-btn blue-btn" id="accept-all-btn">ACCEPT ALL</button>
+          </div>
+        </form>
+      </div>`;
+    document.body.prepend(overlay);
+  }
+  // Allow preferences to be revised from the footer on any storefront page.
+  const footer = document.querySelector(".massive-footer .footer-content");
+  if (footer && !document.getElementById("cookie-preferences-btn")) {
+    const button = document.createElement("button");
+    button.id = "cookie-preferences-btn";
+    button.className = "cookie-preferences-toggle";
+    button.type = "button";
+    button.textContent = "COOKIE PREFERENCES";
+    footer.appendChild(button);
+  }
   let existing = null;
   try { existing = JSON.parse(localStorage.getItem(COOKIE_CONSENT_KEY) || "null"); }
   catch (_) { existing = null; }
