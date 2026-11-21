@@ -204,3 +204,10 @@
   .shop-search-inner input { width: 100%; }
   .shop-search-inner p { margin-top: 10px; }
 }
+
+/* Search and sort toolbar: keep controls legible on small screens. */
+.shop-sort-group{display:flex;align-items:center;gap:10px;min-width:0;}
+.shop-sort-group label{margin:0;white-space:nowrap;}
+.shop-sort-group select{min-width:190px;max-width:100%;border:1px solid #111;border-radius:0;background:#fff;color:#111;padding:14px 28px 14px 12px;font:13px Helvetica,Arial,sans-serif;cursor:pointer;}
+.shop-sort-group select:focus-visible{outline:2px solid var(--glh-accent);outline-offset:2px;}
+@media(max-width:600px){.shop-sort-group{margin-top:14px;width:100%;justify-content:space-between;}.shop-sort-group label{margin:0;}.shop-sort-group select{flex:1;min-width:0;}}
