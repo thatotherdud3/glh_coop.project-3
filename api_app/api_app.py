@@ -1,4 +1,5 @@
 import json
+import math
 import sqlite3
 import hashlib
 import os
@@ -85,6 +86,21 @@ def get_db_connection():
             if name not in order_columns:
                 conn.execute(f"ALTER TABLE orders ADD COLUMN {name} TEXT")
 
+    # Add fields without replacing or reseeding existing producer inventory.
+    if columns and "product_description" not in columns:
+        conn.execute("ALTER TABLE products ADD COLUMN product_description TEXT")
+
+    # A retry of one checkout request must not create another order.
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS checkout_requests (
+            customer_id INTEGER NOT NULL,
+            checkout_key TEXT NOT NULL,
+            order_id INTEGER NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (customer_id, checkout_key)
+        )
+    """)
+
     ensure_producer_metrics_schema(conn)
     conn.commit()
     return conn
@@ -115,8 +131,8 @@ def insert_inventory(data):
 
     # SQL insert statement for a new product record
     cursor.execute("""
-        INSERT INTO products (producer_id, product_name, price, stock_level, allergen_info, batch_number, product_image, harvest_date)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO products (producer_id, product_name, price, stock_level, allergen_info, batch_number, product_image, harvest_date, product_description)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, (
         # binds each value to its paramterised placeholder
         data.get("producer_id"),
@@ -126,7 +142,8 @@ def insert_inventory(data):
         data.get("allergen_info"),
         data.get("batch_number"),
         data.get("product_image"),
-        data.get("harvest_date")
+        data.get("harvest_date"),
+        data.get("product_description", "")
     ))
     connection.commit()
     connection.close()
@@ -669,10 +686,19 @@ class NativeAPIHandler(SimpleHTTPRequestHandler):
 
                 stock_level = int(data.get("stock_level", 0))
                 price = float(data.get("price", 0.0))
-                if stock_level < 0 or stock_level > 1000000 or not (0 <= price <= 100000):
-                    raise ValueError("Invalid stock quantity or unit price.")
+                if stock_level < 0 or stock_level > 1000000 or not math.isfinite(price) or not (0 <= price <= 100000) or round(price, 2) != price:
+                    raise ValueError("Enter a valid quantity and a unit price with up to two decimals.")
                 if not (data.get("product_name") or "").strip():
                     raise ValueError("Product name is required.")
+                if len(data["product_name"].strip()) > 255:
+                    raise ValueError("Product name is too long.")
+                if not (data.get("batch_number") or "").strip():
+                    raise ValueError("Batch reference is required.")
+                if len(data["batch_number"].strip()) > 100:
+                    raise ValueError("Batch reference is too long.")
+                description = (data.get("product_description") or "").strip()
+                if len(description) > 1500:
+                    raise ValueError("Description cannot exceed 1500 characters.")
 
                 final_payload = {
                     "harvest_date": harvest_date,
@@ -682,7 +708,8 @@ class NativeAPIHandler(SimpleHTTPRequestHandler):
                     "stock_level": stock_level,
                     "price": price,
                     "allergen_info": data.get("allergen_info"),
-                    "product_image": image_filename
+                    "product_image": image_filename,
+                    "product_description": description
                 }
 
                 insert_inventory(final_payload)
@@ -713,11 +740,32 @@ class NativeAPIHandler(SimpleHTTPRequestHandler):
                     self.send_json_result(401, {"message": "Sign in as a customer to place an order."})
                     return
                 cart_items = payload.get("cart", [])
+                checkout_key = payload.get("checkout_key")
+                if checkout_key is not None and (
+                    not isinstance(checkout_key, str)
+                    or not re.fullmatch(r"[A-Za-z0-9._-]{8,128}", checkout_key)
+                ):
+                    self.send_json_result(400, {"message": "Invalid checkout request ID."})
+                    return
                 submitted_total = payload.get("total_price", 0.0)
                 delivery_method = payload.get("delivery_method", "hub")
 
-                # wraps all three write operations in a single transaction
-                connection.execute("BEGIN TRANSACTION")
+                # BEGIN IMMEDIATE serialises stock changes and order writes.
+                # Retries with the same key return the original order.
+                connection.execute("BEGIN IMMEDIATE")
+                if checkout_key:
+                    recorded = connection.execute(
+                        "SELECT order_id FROM checkout_requests WHERE customer_id = ? AND checkout_key = ?",
+                        (customer_id, checkout_key)
+                    ).fetchone()
+                    if recorded:
+                        connection.rollback()
+                        self.send_json_result(200, {
+                            "status": "success",
+                            "order_id": recorded["order_id"],
+                            "duplicate": True
+                        })
+                        return
                 if delivery_method not in ("hub", "direct"):
                     connection.rollback()
                     self.send_json_result(400, {"message": "Invalid delivery method."})
@@ -806,8 +854,11 @@ class NativeAPIHandler(SimpleHTTPRequestHandler):
                     product = cursor.fetchone()
                     if not product or product["stock_level"] < quantity:
                         connection.rollback()
-                        self.send_json_result(400, {
-                            "message": f"Insufficient stock for product {product_id}."
+                        self.send_json_result(409, {
+                            "code": "INSUFFICIENT_STOCK",
+                            "product_id": product_id,
+                            "available_stock": product["stock_level"] if product else 0,
+                            "message": f"Some produce has sold out or changed quantity (product #{product_id}). Your cart was not submitted."
                         })
                         return
                     validated_items.append((product, quantity))
@@ -827,7 +878,8 @@ class NativeAPIHandler(SimpleHTTPRequestHandler):
                 if provided_total != expected_total:
                     connection.rollback()
                     self.send_json_result(409, {
-                        "message": "Order total changed. Refresh your cart to use current prices and delivery."
+                        "code": "PRICE_CHANGED",
+                        "message": "Prices have changed since you added these products. Review the updated cart before trying again."
                     })
                     return
 
@@ -854,26 +906,37 @@ class NativeAPIHandler(SimpleHTTPRequestHandler):
                         ),
                     )
                     cursor.execute(
-                        "UPDATE products SET stock_level = stock_level - ? WHERE product_id = ?",
-                        (quantity, product["product_id"]),
+                        "UPDATE products SET stock_level = stock_level - ? "
+                        "WHERE product_id = ? AND stock_level >= ?",
+                        (quantity, product["product_id"], quantity),
+                    )
+                    if cursor.rowcount != 1:
+                        connection.rollback()
+                        self.send_json_result(409, {
+                            "code": "INSUFFICIENT_STOCK",
+                            "message": "Stock changed during checkout. Please review your cart."
+                        })
+                        return
+
+                if checkout_key:
+                    connection.execute(
+                        "INSERT INTO checkout_requests (customer_id, checkout_key, order_id) "
+                        "VALUES (?, ?, ?)", (customer_id, checkout_key, order_id)
                     )
 
                 # commits all three operations at once
                 connection.commit()
                 print(f"TRANSACTION LOG: Order {order_id} successfully processed for Customer {customer_id}.")
 
-                self.send_response(201)
-                self.send_header('Access-Control-Allow-Origin', '*')
-                self.send_header('Content-type', 'application/json')
-                self.end_headers()
-                self.wfile.write(json.dumps({"status": "success", "order_id": order_id}).encode('utf-8'))
+                self.send_json_result(201, {"status": "success", "order_id": order_id})
 
-            except Exception as e:
-                # if anything fails all three SQL operations are rolled back together
+            except (ValueError, json.JSONDecodeError, TypeError) as error:
                 connection.rollback()
-                print(f"TRANSACTION HALTED: Critical failure during checkout. {e}")
-                self.send_response(500)
-                self.end_headers()
+                self.send_json_result(400, {"message": "Invalid checkout request. Review the cart and try again."})
+            except (sqlite3.Error, KeyError) as error:
+                connection.rollback()
+                print(f"CHECKOUT ERROR: {error}")
+                self.send_json_result(500, {"message": "The order could not be recorded. Your cart is unchanged; please retry."})
             finally:
                 # always closes the connection even if an exception was raised
                 connection.close()
@@ -951,6 +1014,94 @@ class NativeAPIHandler(SimpleHTTPRequestHandler):
                 if connection is not None:
                     connection.rollback()
                 self.send_json_result(500, {"message": "Unable to update fulfilment."})
+            finally:
+                if connection is not None:
+                    connection.close()
+        elif re.fullmatch(r"/products/[0-9]+", urlsplit(self.path).path):
+            connection = None
+            try:
+                product_id = int(urlsplit(self.path).path.split("/")[-1])
+                if int(self.headers.get("Content-Length", 0)) > 16384:
+                    self.send_json_result(413, {"message": "Product details are too large."})
+                    return
+                content_length = int(self.headers.get("Content-Length", 0))
+                payload = json.loads(self.rfile.read(content_length).decode("utf-8"))
+                if not isinstance(payload, dict):
+                    raise ValueError("Enter valid product details.")
+                name = payload.get("product_name")
+                batch = payload.get("batch_number")
+                allergen = payload.get("allergen_info")
+                description = payload.get("product_description", "")
+                harvest = payload.get("harvest_date") or None
+                if any(not isinstance(x, str) for x in (name, batch, allergen, description)):
+                    raise ValueError("Product details must contain text.")
+                name, batch, allergen, description = (
+                    name.strip(), batch.strip(), allergen.strip(), description.strip()
+                )
+                if not name or len(name) > 255:
+                    raise ValueError("Enter a product name (maximum 255 characters).")
+                if not batch or len(batch) > 100:
+                    raise ValueError("Enter a batch reference (maximum 100 characters).")
+                if not allergen or len(allergen) > 500:
+                    raise ValueError("Declare allergens or select 'No Allergens Present'.")
+                if len(description) > 1500:
+                    raise ValueError("Description cannot exceed 1500 characters.")
+                if harvest is not None:
+                    if not isinstance(harvest, str):
+                        raise ValueError("Harvest date is invalid.")
+                    harvested = date.fromisoformat(harvest)
+                    if harvested > date.today():
+                        raise ValueError("Harvest date cannot be in the future.")
+                raw_stock = payload.get("stock_level")
+                if isinstance(raw_stock, bool) or not isinstance(raw_stock, int) or not 0 <= raw_stock <= 1000000:
+                    raise ValueError("Stock must be a whole number from 0 to 1,000,000.")
+                raw_price = payload.get("price")
+                if isinstance(raw_price, bool):
+                    raise ValueError("Price must be a valid GBP amount.")
+                price = float(raw_price)
+                if not math.isfinite(price) or price < 0 or price > 100000 or round(price, 2) != price:
+                    raise ValueError("Price must be between £0 and £100,000 with at most two decimal places.")
+
+                connection = get_db_connection()
+                producer_id = producer_from_request(connection, self.headers)
+                if producer_id is None:
+                    self.send_json_result(401, {"message": "Producer session expired. Please sign in again."})
+                    return
+                connection.execute("BEGIN IMMEDIATE")
+                owned = connection.execute(
+                    "SELECT product_id FROM products WHERE product_id = ? AND producer_id = ?",
+                    (product_id, producer_id)
+                ).fetchone()
+                if owned is None:
+                    connection.rollback()
+                    self.send_json_result(404, {"message": "This listing is not in your producer inventory."})
+                    return
+                collision = connection.execute(
+                    "SELECT product_id FROM products WHERE batch_number = ? AND product_id != ? LIMIT 1",
+                    (batch, product_id)
+                ).fetchone()
+                if collision:
+                    connection.rollback()
+                    self.send_json_result(409, {"message": "That batch reference is already in use."})
+                    return
+                connection.execute("""
+                    UPDATE products
+                    SET product_name = ?, batch_number = ?, price = ?,
+                        stock_level = ?, allergen_info = ?, harvest_date = ?,
+                        product_description = ?
+                    WHERE product_id = ? AND producer_id = ?
+                """, (name, batch, price, raw_stock, allergen, harvest, description, product_id, producer_id))
+                connection.commit()
+                self.send_json_result(200, {"status": "success", "message": "Product updated.", "product_id": product_id})
+            except (ValueError, TypeError, json.JSONDecodeError):
+                if connection is not None:
+                    connection.rollback()
+                self.send_json_result(400, {"message": "Please check the product name, stock, price, batch and allergen details."})
+            except sqlite3.Error as error:
+                print(f"PRODUCT UPDATE ERROR: {error}")
+                if connection is not None:
+                    connection.rollback()
+                self.send_json_result(500, {"message": "Unable to save changes. Your original listing is intact."})
             finally:
                 if connection is not None:
                     connection.close()
