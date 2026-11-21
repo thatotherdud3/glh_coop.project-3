@@ -4,8 +4,8 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>GLH | Active Cart</title>
-    <link rel="stylesheet" href="style1.css?v=glh-cart-20261121-ledgerfix" />
-    <link rel="stylesheet" href="cart-design.css?v=glh-cart-20261121-ledgerfix" />
+    <link rel="stylesheet" href="style1.css?v=glh-cart-routing-20261121" />
+    <link rel="stylesheet" href="cart-design.css?v=glh-cart-routing-20261121" />
   </head>
   <body class="cart-page">
     <input type="checkbox" id="menu-toggle" class="menu-checkbox" />
@@ -50,7 +50,10 @@
     <label for="menu-toggle" class="menu-shield" id="menu-shield"></label>
 
     <main class="cart-container">
-      <h1 class="cart-visually-hidden">Active cart</h1>
+      <header class="cart-hero">
+        <span class="cart-hero-eyebrow">PENDING REQUISITION</span>
+        <h1>Active Cart</h1>
+      </header>
       <div class="cart-grid">
         <div class="cart-lines">
           <section class="cart-items" aria-label="Products in your cart"></section>
@@ -78,6 +81,39 @@
               </span>
             </label>
           </fieldset>
+
+          <section class="cart-route-form" id="cart-collection-panel" aria-labelledby="cart-node-label">
+            <label class="cart-route-label" id="cart-node-label" for="cart-collection-node">SELECT COLLECTION NODE</label>
+            <select id="cart-collection-node" class="cart-route-input" name="collection_node_code" required>
+              <option value="">Choose a collection hub</option>
+              <option value="ND-01">ND-01 / Liverpool Hub</option>
+              <option value="ND-02">ND-02 / Manchester Hub</option>
+              <option value="ND-03">ND-03 / Cardiff Hub</option>
+              <option value="ND-04">ND-04 / Glasgow Hub</option>
+              <option value="ND-05">ND-05 / Belfast Hub</option>
+              <option value="ND-06">ND-06 / Dublin Hub</option>
+            </select>
+            <p class="cart-route-help">These are example hubs only. Choosing one records your preference, not a confirmed collection booking.</p>
+          </section>
+
+          <section class="cart-route-form" id="cart-address-panel" aria-labelledby="cart-address-title" hidden>
+            <span class="cart-route-label" id="cart-address-title">HOME DELIVERY ADDRESS</span>
+            <label class="cart-field-label" for="cart-address-line1">Address line 1 <span aria-hidden="true">*</span></label>
+            <input id="cart-address-line1" class="cart-route-input" type="text" autocomplete="shipping street-address" maxlength="120" placeholder="Street address and house number" required disabled />
+            <label class="cart-field-label" for="cart-address-line2">Address line 2 <span class="cart-optional">(optional)</span></label>
+            <input id="cart-address-line2" class="cart-route-input" type="text" maxlength="120" placeholder="Flat, building or additional details" disabled />
+            <label class="cart-field-label" for="cart-address-town">Town / city <span aria-hidden="true">*</span></label>
+            <input id="cart-address-town" class="cart-route-input" type="text" autocomplete="shipping address-level2" maxlength="80" placeholder="Town or city" required disabled />
+            <label class="cart-field-label" for="cart-address-postcode">Postcode / Eircode <span aria-hidden="true">*</span></label>
+            <input id="cart-address-postcode" class="cart-route-input" type="text" autocomplete="shipping postal-code" maxlength="16" placeholder="Postcode" required disabled />
+            <label class="cart-field-label" for="cart-address-country">Country <span aria-hidden="true">*</span></label>
+            <select id="cart-address-country" class="cart-route-input" autocomplete="shipping country-name" required disabled>
+              <option value="United Kingdom">United Kingdom</option>
+              <option value="Ireland">Ireland</option>
+            </select>
+            <p class="cart-route-help">Delivery address stored with the order. This demo does not arrange a real delivery.</p>
+          </section>
+
           <table class="summary-totals">
             <tbody>
               <tr><th scope="row">SUBTOTAL</th><td class="numeric">£0.00</td></tr>
@@ -96,6 +132,6 @@
       </div>
     </main>
 
-    <script src="app.js?v=glh-cart-20261121-ledgerfix"></script>
+    <script src="app.js?v=glh-cart-routing-20261121"></script>
   </body>
 </html>

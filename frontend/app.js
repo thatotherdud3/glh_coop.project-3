@@ -1014,6 +1014,67 @@ function updateOrderSummary() {
   if (button) button.disabled = !cart.length || stockIssue;
 }
 
+function initCartDeliverySelection() {
+  const collectionPanel = document.getElementById("cart-collection-panel");
+  const addressPanel = document.getElementById("cart-address-panel");
+  const collectionSelect = document.getElementById("cart-collection-node");
+  if (!collectionPanel || !addressPanel || !collectionSelect) return;
+
+  const radios = document.querySelectorAll('input[name="delivery-method"]');
+  function syncFields() {
+    const direct = document.querySelector('input[name="delivery-method"]:checked')?.value === "direct";
+    collectionPanel.hidden = direct;
+    addressPanel.hidden = !direct;
+    collectionSelect.disabled = direct;
+    collectionSelect.required = !direct;
+    addressPanel.querySelectorAll("input, select").forEach(field => {
+      field.disabled = !direct;
+    });
+    updateOrderSummary();
+  }
+  radios.forEach(radio => radio.addEventListener("change", syncFields));
+  addressPanel.querySelectorAll("input").forEach(field => {
+    field.addEventListener("input", () => field.setCustomValidity(""));
+  });
+  syncFields();
+}
+
+function getCartRouting() {
+  const method = document.querySelector('input[name="delivery-method"]:checked')?.value || "hub";
+  if (method === "hub") {
+    const node = document.getElementById("cart-collection-node");
+    if (!node?.value) {
+      node?.reportValidity();
+      return null;
+    }
+    return { collection_node_code: node.value, delivery_address: null };
+  }
+
+  const fields = {
+    line1: document.getElementById("cart-address-line1"),
+    line2: document.getElementById("cart-address-line2"),
+    town: document.getElementById("cart-address-town"),
+    postcode: document.getElementById("cart-address-postcode"),
+    country: document.getElementById("cart-address-country")
+  };
+  const address = {};
+  for (const [key, field] of Object.entries(fields)) {
+    if (!field) return null;
+    const value = field.value.trim();
+    if (!value && key !== "line2") {
+      field.setCustomValidity("Please complete this field.");
+      field.reportValidity();
+      return null;
+    }
+    if (!field.checkValidity()) {
+      field.reportValidity();
+      return null;
+    }
+    address[key] = value;
+  }
+  return { collection_node_code: null, delivery_address: address };
+}
+
 function initiateCheckout() {
   const userId = localStorage.getItem("session_user_id");
   if (!userId) {
@@ -1029,11 +1090,13 @@ function initiateCheckout() {
     alert("SYSTEM HALT: Some products exceed available stock. Please adjust your cart.");
     return;
   }
+  const routing = getCartRouting();
+  if (!routing) return;
   const { total, deliveryMethod } = calculateCartTotals();
   fetch("http://127.0.0.1:8000/checkout", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ customer_id: userId, cart, delivery_method: deliveryMethod, total_price: total })
+    body: JSON.stringify({ customer_id: userId, cart, delivery_method: deliveryMethod, total_price: total, ...routing })
   })
     .then(async (response) => {
       const data = await response.json();
@@ -1125,13 +1188,8 @@ document.addEventListener("DOMContentLoaded", () => {
     renderCartPage();
     refreshCartProductMetadata();
 
-    // recalculates the order total when the delivery option changes
-    const deliveryToggles = document.querySelectorAll(
-      'input[name="delivery-method"]',
-    );
-    deliveryToggles.forEach((toggle) => {
-      toggle.addEventListener("change", renderCartPage);
-    });
+    // Show the relevant collection or home-delivery form.
+    initCartDeliverySelection();
 
     // wires up the checkout button
     const submitBtn = document.querySelector(".cart-submit");

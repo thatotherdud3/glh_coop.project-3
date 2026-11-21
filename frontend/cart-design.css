@@ -57,3 +57,54 @@
 @media(max-width:560px){.cart-page .cart-item{grid-template-columns:minmax(130px,37%) minmax(0,1fr)!important;grid-template-rows:minmax(200px,auto) 75px;min-height:0}.cart-page .item-media{min-height:200px}.cart-page .item-details{padding:20px 16px}.cart-page .item-name{font-size:clamp(24px,6vw,34px)}.cart-page .item-farm{font-size:9px}.cart-page .item-metrics{grid-column:1/-1;display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:75px;border-top:1px solid #111;border-left:0}.cart-page .metric-cell{border-bottom:0;border-right:1px solid #111}.cart-page .metric-cell:last-child{border-right:0}.cart-page .order-summary{padding:35px 24px 52px}.cart-page .cart-continue-link{margin:28px 24px 48px}.cart-page .cart-ledger-amount{font-size:clamp(35px,11vw,52px)}}
 /* Keep unused vertical space beneath short carts light, never the old black gutter. */
 .cart-page .cart-lines,.cart-page .cart-items,.cart-page .cart-grid{background-color:#fbfbf9}
+
+/* Top editorial cart header restored from the Figma composition. */
+.cart-page .cart-hero{
+  display:flex;flex-direction:column;align-items:flex-start;justify-content:center;
+  min-height:350px;padding:88px 5% 70px;
+  background:#fbfbf9;border-bottom:1px solid #111;
+}
+.cart-page .cart-hero-eyebrow{
+  font:700 11px/1.5 Helvetica,Arial,sans-serif;
+  letter-spacing:2.3px;color:#aaa;margin-bottom:17px;
+}
+.cart-page .cart-hero h1{
+  margin:0;font:400 clamp(74px,10vw,150px)/.98 Didot,"Bodoni MT","Times New Roman",Georgia,serif;
+  letter-spacing:-.065em;color:#080808;
+}
+.cart-page .cart-route-form{
+  display:flex;flex-direction:column;gap:10px;
+  margin:-4px 0 28px;padding:20px;
+  border:1px solid #cfcfcf;background:#f5f5f2;
+}
+.cart-page .cart-route-form[hidden]{display:none!important}
+.cart-page .cart-route-label{
+  display:block;margin-bottom:6px;
+  font:700 11px/1.5 Helvetica,Arial,sans-serif;
+  letter-spacing:1.1px;color:#111;
+}
+.cart-page .cart-field-label{
+  display:block;margin-top:7px;
+  font:700 11px/1.5 Helvetica,Arial,sans-serif;color:#333;
+}
+.cart-page .cart-optional{font-weight:400;color:#777}
+.cart-page .cart-route-input{
+  display:block;width:100%;min-width:0;min-height:43px;
+  border:1px solid #999;border-radius:0;
+  padding:11px 12px;background:#fbfbf9;color:#111;
+  font:400 13px/1.4 Helvetica,Arial,sans-serif;
+}
+.cart-page select.cart-route-input{cursor:pointer}
+.cart-page .cart-route-help{
+  margin:8px 0 0;font:400 11px/1.55 Helvetica,Arial,sans-serif;
+  color:#666;
+}
+@media(max-width:850px){
+  .cart-page .cart-hero{min-height:280px;padding:70px 6% 60px}
+  .cart-page .cart-hero h1{font-size:clamp(62px,11vw,105px)}
+}
+@media(max-width:560px){
+  .cart-page .cart-hero{min-height:220px;padding:55px 24px 45px}
+  .cart-page .cart-hero h1{font-size:clamp(58px,13vw,78px)}
+  .cart-page .cart-route-form{padding:16px}
+}
