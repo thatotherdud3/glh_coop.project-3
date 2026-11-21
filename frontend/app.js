@@ -58,20 +58,12 @@ function updateCartCount() {
 function addToCart(id, name, price, stock, requestedQuantity = 1, productMetadata = {}) {
   const available = Math.max(0, Math.floor(Number(stock) || 0));
   const quantity = Number(requestedQuantity);
-  if (available <= 0) {
-    alert("SYSTEM HALT: Inventory depleted.");
-    return false;
-  }
-  if (!Number.isInteger(quantity) || quantity < 1) {
-    alert("SYSTEM HALT: Select a valid quantity.");
+  if (available <= 0 || !Number.isInteger(quantity) || quantity < 1) {
     return false;
   }
   const existing = cart.find((item) => Number(item.product_id) === Number(id));
   const alreadyInCart = existing ? Number(existing.quantity) || 0 : 0;
-  if (alreadyInCart + quantity > available) {
-    alert(`SYSTEM HALT: Maximum available stock (${available}) reached. You already have ${alreadyInCart} in your cart.`);
-    return false;
-  }
+  if (alreadyInCart + quantity > available) return false;
   // Keep the exact produce image, producer and trace data with the cart item.
   const metadata = {
     product_name: name,
@@ -285,6 +277,8 @@ function populateShop(inventory, container) {
         feedback.textContent = `${totalForProduct} UNIT${totalForProduct === 1 ? "" : "S"} NOW IN CART`;
         quantityInput.value = "1";
         updateQuantityControls();
+      } else {
+        feedback.textContent = "This amount is no longer available. Review the remaining stock.";
       }
     });
     updateQuantityControls();
@@ -482,6 +476,16 @@ let authFormObj = document.querySelector(".auth-form");
 let isLoginMode = document.getElementById("user-id");
 let isRegistrationMode = document.getElementById("passkey-confirm");
 
+if (authFormObj && isLoginMode) {
+  const feedback = document.createElement("p");
+  feedback.id = "auth-feedback";
+  feedback.className = "glh-inline-notice";
+  feedback.hidden = true;
+  feedback.setAttribute("role", "status");
+  feedback.setAttribute("aria-live", "polite");
+  authFormObj.prepend(feedback);
+}
+
 if (authFormObj) {
   authFormObj.addEventListener("submit", async function (event) {
     event.preventDefault();
@@ -556,66 +560,46 @@ if (authFormObj) {
       }
     }
 
-    // login path
+    // login: sign in once, show helpful errors within the form.
     else if (isLoginMode) {
-      const email = document.getElementById("user-id").value;
-      const password = document.getElementById("passkey").value;
-
-      // reads the mode label to determine which terminal is being used
-      const modeText = document.querySelector(".auth-mode").innerText;
-      const requestedNode = modeText.includes("PRODUCER")
-        ? "producer"
-        : "customer";
-
-      console.log(
-        `SYSTEM LOG: Initiating authentication for [${email}] on [${requestedNode.toUpperCase()}] node...`,
-      );
-
-      fetch("/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: email,
-          password: password,
-          requested_node: requestedNode,
-        }),
-      })
-        .then((res) => {
-          if (!res.ok && res.status !== 401 && res.status !== 403)
-            throw new Error("Server failure.");
-          return res.json();
-        })
-        .then((data) => {
-          if (data.status === "success") {
-            console.log(`AUTH SUCCESS: Role: ${data.role.toUpperCase()}`);
-            // A signed session is also supplied as a first-party HttpOnly cookie.
-            // Older localStorage-based sessions remain compatible.
-
-            // saves the session data to local storage
-            localStorage.setItem("session_user_id", data.user_id);
-            localStorage.setItem("session_role", data.role);
-            localStorage.setItem("session_full_name", data.full_name);
-            if (data.role === "producer" && data.session_token) {
-              localStorage.setItem("session_producer_token", data.session_token);
-            } else {
-              localStorage.removeItem("session_producer_token");
-            }
-
-            // The dashboard can authenticate through the HttpOnly cookie,
-            // even if the legacy localStorage token was not persisted.
-
-            // redirects to the correct portal based on role
-            window.location.href = data.redirect_url;
-          } else {
-            alert(`SYSTEM HALT: Access Denied. ${data.message}`);
-            // clears the passkey field so the user can try again
-            document.getElementById("passkey").value = "";
-          }
-        })
-        .catch((err) => {
-          console.error("AUTH ERROR:", err);
-          alert("Unable to complete sign-in. Check the browser Console and API connection.");
-        });
+      const email = document.getElementById("user-id").value.trim();
+      const passwordField = document.getElementById("passkey");
+      const password = passwordField.value;
+      const modeText = document.querySelector(".auth-mode")?.innerText || "";
+      const requestedNode = modeText.includes("PRODUCER") ? "producer" : "customer";
+      const submitButton = authFormObj.querySelector('button[type="submit"]');
+      if (submitButton.disabled) return;
+      submitButton.disabled = true;
+      const originalLabel = submitButton.textContent;
+      submitButton.textContent = "VERIFYING IDENTITY…";
+      showSystemFeedback("auth-feedback", "");
+      try {
+        const data = await fetch("/login", {
+          method: "POST", credentials: "same-origin",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password, requested_node: requestedNode })
+        }).then(readApiResponse);
+        if (data.status !== "success") throw new Error(data.message || "Sign-in failed.");
+        localStorage.setItem("session_user_id", String(data.user_id));
+        localStorage.setItem("session_role", data.role);
+        localStorage.setItem("session_full_name", data.full_name);
+        if (data.role === "producer" && data.session_token) {
+          localStorage.setItem("session_producer_token", data.session_token);
+        } else {
+          localStorage.removeItem("session_producer_token");
+        }
+        window.location.href = data.redirect_url;
+      } catch (error) {
+        showSystemFeedback("auth-feedback",
+          error.status === 401 || error.status === 403 ?
+            (error.message || "Your email, password or account type is incorrect.") :
+            "Unable to sign in. " + (error.message || "Check your connection and retry."),
+          "error");
+        passwordField.value = "";
+      } finally {
+        submitButton.disabled = false;
+        submitButton.textContent = originalLabel;
+      }
     }
   });
 }
@@ -714,34 +698,20 @@ async function logout() {
   }
 }
 
-function deleteAccount() {
+async function deleteAccount() {
   const userId = localStorage.getItem("session_user_id");
   if (!userId) return;
-
-  if (
-    !confirm(
-      "SYSTEM QUERY: Authorize permanent account deletion? This action cannot be undone.",
-    )
-  )
-    return;
-
-  // sends a DELETE request to the API with the user id in the URL
-  fetch(`/users/${userId}`, { method: "DELETE" })
-    .then((response) => {
-      if (response.ok) {
-        alert("Account successfully purged from system.");
-        // calls logout to clear the session after deletion
-        logout();
-      } else {
-        throw new Error("Server rejected deletion.");
-      }
-    })
-    .catch((err) => {
-      console.error("ACCOUNT DELETION ERROR:", err);
-      alert("CRITICAL ERROR: Account deletion failed.");
-    });
+  if (!confirm("Permanently delete this account? Accounts with orders cannot be deleted in this demo.")) return;
+  try {
+    await fetch("/users/" + encodeURIComponent(userId), {
+      method: "DELETE", credentials: "same-origin"
+    }).then(readApiResponse);
+    await logout();
+  } catch (error) {
+    showSystemFeedback("account-feedback",
+      error.message || "Unable to delete this account. Please try again.", "error");
+  }
 }
-
 
 /* cookie consent wall */
 
@@ -844,6 +814,7 @@ function showAccountOptions() {
         <span style="font-size:11px;letter-spacing:.1em;color:#666;">ACCOUNT MANAGEMENT</span>
         <h2 style="margin:16px 0 32px;font-size:24px;">${escapeHtml(name.toUpperCase())}</h2>
 
+        <p id="account-feedback" class="glh-inline-notice" role="status" aria-live="polite" hidden></p>
         <div id="account-main-options">
           <button onclick="showUpdateForm()" style="${_btnStyle("#111", "#fff")}">[ UPDATE DETAILS ]</button>
           <button onclick="deleteAccount()" style="${_btnStyle("transparent", "#111", "1px solid #c00", "#c00")}">[ DELETE ACCOUNT ]</button>
@@ -893,46 +864,38 @@ function showUpdateForm() {
   document.getElementById("account-update-form").style.display = "block";
 }
 
-function submitUpdateDetails() {
+async function submitUpdateDetails() {
   const userId = localStorage.getItem("session_user_id");
   const fullName = document.getElementById("update-name").value.trim();
   const email = document.getElementById("update-email").value.trim();
   const password = document.getElementById("update-password").value;
-
   if (!fullName || !email) {
-    alert("SYSTEM HALT: Name and email are required fields.");
+    showSystemFeedback("account-feedback", "Enter your full name and email address.", "error");
     return;
   }
-
-  // sends a PUT request to update the user record on the server
-  fetch(`/users/${userId}`, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ full_name: fullName, email, password }),
-  })
-    .then((r) => r.json())
-    .then((data) => {
-      if (data.status === "success") {
-        // updates the session name in local storage to match the new value
-        localStorage.setItem("session_full_name", data.full_name);
-        alert("PROFILE UPDATE: Details successfully committed to ledger.");
-        document.getElementById("account-modal").remove();
-
-        // refreshes the welcome title on the customer portal without a page reload
-        const welcomeTitle = document.getElementById("welcome-title");
-        if (welcomeTitle) {
-          welcomeTitle.innerText = `Welcome Back, ${data.full_name.split(" ")[0]}.`;
-        }
-      } else {
-        alert(`SYSTEM HALT: Update failed. ${data.message || ""}`);
-      }
-    })
-    .catch((err) => {
-      console.error("UPDATE ERROR:", err);
-      alert("CRITICAL ERROR: Failed to commit profile update.");
-    });
+  if (password && password.length < 8) {
+    showSystemFeedback("account-feedback", "New passwords must have at least 8 characters.", "error");
+    return;
+  }
+  showSystemFeedback("account-feedback", "");
+  try {
+    const data = await fetch("/users/" + encodeURIComponent(userId), {
+      method: "PUT", credentials: "same-origin",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ full_name: fullName, email, password })
+    }).then(readApiResponse);
+    if (data.status !== "success") throw new Error(data.message || "Unable to save profile changes.");
+    localStorage.setItem("session_full_name", data.full_name);
+    const title = document.getElementById("welcome-title");
+    if (title) title.textContent = "Welcome Back, " + data.full_name.split(" ")[0] + ".";
+    document.getElementById("account-update-form").style.display = "none";
+    document.getElementById("account-main-options").style.display = "block";
+    showSystemFeedback("account-feedback", "Your account details have been saved.", "success");
+  } catch (error) {
+    showSystemFeedback("account-feedback",
+      error.message || "Unable to save your account details. Please try again.", "error");
+  }
 }
-
 
 /* cart page — image synchronisation, quantity steppers and totals */
 
