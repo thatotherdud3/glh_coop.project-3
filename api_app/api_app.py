@@ -4,6 +4,7 @@ import hashlib
 import os
 import re
 import secrets
+from password_security import hash_password, verify_password, needs_upgrade
 from datetime import date
 from urllib.parse import unquote, urlsplit
 from http.server import SimpleHTTPRequestHandler, HTTPServer
@@ -354,8 +355,10 @@ class NativeAPIHandler(SimpleHTTPRequestHandler):
                     return
                 role = "customer"
 
-                # converts the password into a SHA256 hash before storing it
-                hashed_pw = hashlib.sha256(raw_password.encode('utf-8')).hexdigest()
+                if not isinstance(raw_password, str) or len(raw_password) < 8:
+                    self.send_json_result(400, {"message": "Password must be at least 8 characters."})
+                    return
+                hashed_pw = hash_password(raw_password)
 
                 connection = get_db_connection()
                 cursor = connection.cursor()
@@ -403,15 +406,26 @@ class NativeAPIHandler(SimpleHTTPRequestHandler):
                 # the frontend sends which terminal the user is trying to access
                 requested_node = payload.get("requested_node", "customer")
 
-                # hashes the input to compare against the stored hash
-                hashed_pw = hashlib.sha256(raw_password.encode('utf-8')).hexdigest()
-
+                if not isinstance(email, str) or not isinstance(raw_password, str):
+                    self.send_json_result(400, {"message": "Email and password are required."})
+                    return
                 connection = get_db_connection()
-                cursor = connection.cursor()
-                # SQL select checks the email and hashed password both match
-                cursor.execute("SELECT user_id, full_name, role FROM users WHERE email = ? AND password_hash = ?", (email, hashed_pw))
-                user = cursor.fetchone()
-                connection.close()
+                try:
+                    user = connection.execute(
+                        "SELECT user_id, full_name, role, password_hash FROM users WHERE email = ?",
+                        (email,)
+                    ).fetchone()
+                    if user and verify_password(raw_password, user["password_hash"]):
+                        if needs_upgrade(user["password_hash"]):
+                            connection.execute(
+                                "UPDATE users SET password_hash = ? WHERE user_id = ?",
+                                (hash_password(raw_password), user["user_id"])
+                            )
+                            connection.commit()
+                    else:
+                        user = None
+                finally:
+                    connection.close()
 
                 if user:
                     role = user["role"]
@@ -827,7 +841,7 @@ class NativeAPIHandler(SimpleHTTPRequestHandler):
 
                 if raw_password:
                     # converts the new password into a hash before updating the record
-                    hashed_pw = hashlib.sha256(raw_password.encode('utf-8')).hexdigest()
+                    hashed_pw = hash_password(raw_password)
                     # SQL update statement that includes the new password hash
                     cursor.execute(
                         "UPDATE users SET full_name=?, email=?, password_hash=? WHERE user_id=?",
