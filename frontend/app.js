@@ -21,36 +21,41 @@ function updateCartCount() {
   });
 }
 
-function addToCart(id, name, price, stock) {
-  if (stock <= 0) {
+function addToCart(id, name, price, stock, requestedQuantity = 1) {
+  const available = Math.max(0, Math.floor(Number(stock) || 0));
+  const quantity = Number(requestedQuantity);
+  if (available <= 0) {
     alert("SYSTEM HALT: Inventory depleted.");
-    return;
+    return false;
+  }
+  if (!Number.isInteger(quantity) || quantity < 1) {
+    alert("SYSTEM HALT: Select a valid quantity.");
+    return false;
   }
 
-  // checks if the item is already in the cart
-  let existing = cart.find((i) => i.product_id === id);
+  const existing = cart.find((item) => Number(item.product_id) === Number(id));
+  const alreadyInCart = existing ? Number(existing.quantity) || 0 : 0;
+  if (alreadyInCart + quantity > available) {
+    alert(`SYSTEM HALT: Maximum available stock (${available}) reached. You already have ${alreadyInCart} in your cart.`);
+    return false;
+  }
+
   if (existing) {
-    // stops the user going over the available stock level
-    if (existing.quantity >= stock) {
-      alert(`SYSTEM HALT: Maximum available stock (${stock}) reached.`);
-      return;
-    }
-    existing.quantity += 1;
+    existing.quantity = alreadyInCart + quantity;
+    existing.max_stock = available;
   } else {
-    // adds the item as a new entry in the cart array
     cart.push({
       product_id: id,
       product_name: name,
       price: price,
-      quantity: 1,
-      max_stock: stock,
+      quantity: quantity,
+      max_stock: available,
     });
   }
-
   saveCart();
-  console.log(`ASSET SECURED: ${name} added to local cart.`);
+  console.log(`ASSET SECURED: ${quantity} x ${name} added to local cart.`);
+  return true;
 }
-
 
 /* inventory retrieval and distribution */
 
@@ -111,7 +116,16 @@ function resolveProductImageUrl(imageName) {
 function populateShop(inventory, container) {
   container.innerHTML = "";
 
-  inventory.forEach((item) => {
+  // Alphabetical by the product's name, not by producer or batch.
+  const sortedInventory = [...inventory].sort((a, b) =>
+    String(a.product_name || "").localeCompare(
+      String(b.product_name || ""),
+      "en-GB",
+      { sensitivity: "base", numeric: true },
+    ) || Number(a.product_id) - Number(b.product_id)
+  );
+
+  sortedInventory.forEach((item) => {
     const card = document.createElement("div");
     card.className = "product-card";
 
@@ -160,12 +174,82 @@ function populateShop(inventory, container) {
           <span class="product-allergen">${formattedAllergens}</span>
           <span class="product-price">${formattedPrice}</span>
         </div>
-        <button class="product-action" onclick="addToCart(${item.product_id}, '${item.product_name.replace(/'/g, "\\'")}', ${item.price}, ${item.stock_level})">
+        <button class="product-action" type="button">
           <span>${actionText}</span>
           <span class="action-icon">${actionIcon}</span>
         </button>
     `;
 
+    // Let customers choose a quantity on the shop card before adding to cart.
+    const stock = Math.max(0, Math.floor(Number(item.stock_level) || 0));
+    const actionButton = card.querySelector(".product-action");
+    const quantityRow = document.createElement("div");
+    quantityRow.className = "shop-quantity-row";
+    quantityRow.innerHTML = `
+      <span class="shop-quantity-label">QUANTITY</span>
+      <div class="shop-quantity-controls" role="group" aria-label="Select product quantity">
+        <button type="button" class="shop-quantity-step" data-direction="-1" aria-label="Decrease quantity">−</button>
+        <input type="number" class="shop-quantity-input" min="1" step="1" value="1" inputmode="numeric" aria-label="Quantity to add to cart">
+        <button type="button" class="shop-quantity-step" data-direction="1" aria-label="Increase quantity">+</button>
+      </div>
+      <span class="shop-quantity-remaining" aria-live="polite"></span>
+    `;
+    if (stock === 0) quantityRow.hidden = true;
+    actionButton.before(quantityRow);
+
+    const feedback = document.createElement("p");
+    feedback.className = "shop-add-feedback";
+    feedback.setAttribute("role", "status");
+    feedback.setAttribute("aria-live", "polite");
+    card.appendChild(feedback);
+
+    const quantityInput = quantityRow.querySelector(".shop-quantity-input");
+    const decreaseButton = quantityRow.querySelector('[data-direction="-1"]');
+    const increaseButton = quantityRow.querySelector('[data-direction="1"]');
+    const remainingLabel = quantityRow.querySelector(".shop-quantity-remaining");
+    const actionLabel = actionButton.querySelector("span");
+    const actionIconNode = actionButton.querySelector(".action-icon");
+    const remainingStock = () => {
+      const existing = cart.find((entry) => Number(entry.product_id) === Number(item.product_id));
+      return Math.max(0, stock - (existing ? Number(existing.quantity) || 0 : 0));
+    };
+    const updateQuantityControls = () => {
+      const remaining = remainingStock();
+      const selected = parseInt(quantityInput.value, 10);
+      const quantity = Number.isInteger(selected) ? Math.min(Math.max(selected, 1), Math.max(remaining, 1)) : 1;
+      quantityInput.value = String(quantity);
+      quantityInput.max = String(Math.max(remaining, 1));
+      quantityInput.disabled = remaining === 0;
+      decreaseButton.disabled = remaining === 0 || quantity <= 1;
+      increaseButton.disabled = remaining === 0 || quantity >= remaining;
+      remainingLabel.textContent = `${remaining} AVAILABLE TO ADD`;
+      actionButton.disabled = remaining === 0;
+      actionLabel.textContent = stock === 0 ? "NOT AVAILABLE" : remaining === 0 ? "MAX IN CART" : "ADD TO CART";
+      actionIconNode.textContent = remaining === 0 ? "/" : "+";
+    };
+    decreaseButton.addEventListener("click", () => {
+      quantityInput.stepDown();
+      updateQuantityControls();
+    });
+    increaseButton.addEventListener("click", () => {
+      quantityInput.stepUp();
+      updateQuantityControls();
+    });
+    quantityInput.addEventListener("change", updateQuantityControls);
+    actionButton.addEventListener("click", () => {
+      const selected = Number(quantityInput.value);
+      if (!Number.isInteger(selected) || selected < 1 || selected > remainingStock()) {
+        feedback.textContent = "Choose a quantity within the available stock."; 
+        updateQuantityControls();
+        return;
+      }
+      if (addToCart(item.product_id, item.product_name, Number(item.price), stock, selected)) {
+        feedback.textContent = `${selected} UNIT${selected === 1 ? "" : "S"} ADDED TO CART`;
+        quantityInput.value = "1";
+        updateQuantityControls();
+      }
+    });
+    updateQuantityControls();
     const productImage = card.querySelector(".product-image");
     if (productImage) {
       productImage.addEventListener("error", function () {

@@ -76,3 +76,84 @@
     transition: none;
   }
 }
+
+/* Compact, keyboard-accessible quantity stepper on each produce card. */
+.shop-produce-grid .shop-quantity-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px 12px;
+  border-top: 1px solid #111;
+  padding: 13px 16px;
+  background: #fbfbf9;
+}
+.shop-produce-grid .shop-quantity-row[hidden] { display: none; }
+.shop-produce-grid .shop-quantity-label,
+.shop-produce-grid .shop-quantity-remaining {
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .07em;
+}
+.shop-produce-grid .shop-quantity-remaining { color: #666; }
+.shop-produce-grid .shop-quantity-controls {
+  display: inline-flex;
+  align-items: stretch;
+  border: 1px solid #111;
+  height: 40px;
+}
+.shop-produce-grid .shop-quantity-step {
+  width: 36px;
+  border: 0;
+  background: transparent;
+  color: #111;
+  font: 600 19px Helvetica, Arial, sans-serif;
+  cursor: pointer;
+}
+.shop-produce-grid .shop-quantity-input {
+  width: 48px;
+  min-width: 0;
+  padding: 0 3px;
+  border: 0;
+  border-right: 1px solid #111;
+  border-left: 1px solid #111;
+  border-radius: 0;
+  background: transparent;
+  text-align: center;
+  font: 700 14px Helvetica, Arial, sans-serif;
+  color: #111;
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+.shop-produce-grid .shop-quantity-input::-webkit-inner-spin-button,
+.shop-produce-grid .shop-quantity-input::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.shop-produce-grid .shop-quantity-step:hover:not(:disabled) {
+  background: var(--glh-accent);
+  color: #fff;
+}
+.shop-produce-grid .shop-quantity-step:disabled { opacity: .35; cursor: not-allowed; }
+.shop-produce-grid .shop-quantity-step:focus-visible,
+.shop-produce-grid .shop-quantity-input:focus-visible,
+.shop-produce-grid .product-action:focus-visible {
+  outline: 2px solid var(--glh-accent);
+  outline-offset: 2px;
+}
+.shop-produce-grid .product-action:disabled,
+.shop-produce-grid .product-card:hover .product-action:disabled {
+  background: #e8e8e5;
+  color: #666;
+  cursor: not-allowed;
+}
+.shop-produce-grid .shop-add-feedback {
+  margin: 0;
+  padding: 8px 16px;
+  font: 700 10px Helvetica, Arial, sans-serif;
+  letter-spacing: .08em;
+  color: #167042;
+  background: #fbfbf9;
+}
+.shop-produce-grid .shop-add-feedback:empty { display: none; }
