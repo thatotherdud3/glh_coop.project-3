@@ -2046,3 +2046,30 @@ body:has(.menu-checkbox:checked) {
 .order-history-empty-link:hover,.order-history-empty-link:focus-visible{background:var(--glh-accent);color:#fff;}
 .glh-flash-notice{max-width:740px;margin:24px auto;padding:16px 22px;}
 @media(max-width:600px){.system-table .order-history-empty{padding:44px 18px;}.glh-flash-notice{margin:16px;}}
+
+/* Consistent copyright attribution on every page, including pages without
+   the full editorial footer. */
+.site-copyright {
+  margin: 56px 0 0;
+  padding-top: 22px;
+  border-top: 1px solid rgba(255, 255, 255, .28);
+  color: #c8c8c8;
+  font: 600 11px/1.6 Helvetica, Arial, sans-serif;
+  letter-spacing: .1em;
+  text-align: left;
+}
+.site-legal-footer {
+  background: #111;
+  color: #fff;
+  padding: 28px 40px;
+}
+.site-legal-footer .site-copyright {
+  margin: 0;
+  padding: 0;
+  border-top: 0;
+}
+@media (max-width: 600px) {
+  .site-copyright { margin-top: 34px; font-size: 10px; letter-spacing: .06em; }
+  .site-legal-footer { padding: 24px 20px; }
+  .site-legal-footer .site-copyright { margin-top: 0; }
+}
