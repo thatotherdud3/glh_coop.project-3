@@ -1,0 +1,40 @@
+/* GLH CO-OP Order Record / Editorial ledger */
+.receipt-page{background:#fbfbf9}
+.receipt-page .receipt-main{min-height:76vh}
+.receipt-hero{padding:86px 5% 70px;border-bottom:1px solid #111}
+.receipt-eyebrow,.receipt-label{display:block;color:#999;font:700 11px/1.5 Helvetica,Arial,sans-serif;letter-spacing:1.8px;text-transform:uppercase}
+.receipt-hero h1{margin:20px 0 20px;font:400 clamp(62px,9vw,136px)/.98 Didot,"Bodoni MT",Georgia,serif;letter-spacing:-.065em}
+.receipt-hero p{max-width:680px;margin:0;color:#555;font:400 15px/1.65 Helvetica,Arial,sans-serif}
+.receipt-loading{padding:35px 5%;font:700 12px "Courier New",monospace;letter-spacing:1px}
+.receipt-sign-in{display:inline-block;margin:0 5% 35px;color:var(--glh-accent);font:700 12px Helvetica,Arial,sans-serif}
+.receipt-sign-in[hidden],#receipt-content[hidden]{display:none!important}
+.receipt-facts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border-bottom:1px solid #111}
+.receipt-facts>div{padding:33px 30px;min-width:0;border-right:1px solid #111}
+.receipt-facts>div:last-child{border-right:0}
+.receipt-facts strong{display:block;margin-top:17px;font:600 16px/1.3 Helvetica,Arial,sans-serif;overflow-wrap:anywhere}
+.receipt-columns{display:grid;grid-template-columns:minmax(0,1.8fr) minmax(320px,1fr);align-items:stretch}
+.receipt-products{min-width:0;border-right:1px solid #111}
+.receipt-section-heading{padding:47px 6% 32px}
+.receipt-section-heading h2,.receipt-summary h2{font:400 clamp(38px,4vw,60px)/1.05 Didot,Georgia,serif;letter-spacing:-.04em;margin:15px 0 0}
+.receipt-item{display:grid;grid-template-columns:170px minmax(0,1fr) auto;gap:0;min-height:155px;border-top:1px solid #ddd}
+.receipt-item img{display:block;width:170px;height:100%;min-height:155px;object-fit:cover;border-right:1px solid #ddd;filter:grayscale(20%)}
+.receipt-item-content{padding:27px 25px;display:flex;flex-direction:column;justify-content:center;gap:10px}
+.receipt-item-name{font:400 25px/1.15 Didot,Georgia,serif}
+.receipt-item-producer{font:700 10px/1.4 Helvetica,Arial,sans-serif;letter-spacing:1px;color:#999;text-transform:uppercase}
+.receipt-item-quantity{font:600 12px/1.4 Helvetica,Arial,sans-serif;color:#666}
+.receipt-item-price{padding:30px 25px;white-space:nowrap;font:700 13px Helvetica,Arial,sans-serif}
+.receipt-summary{padding:47px clamp(28px,5vw,74px) 65px;display:flex;flex-direction:column;min-width:0}
+.receipt-route{display:flex;flex-direction:column;gap:12px;margin:40px 0;padding-bottom:35px;border-bottom:1px solid #ddd}
+.receipt-route strong{font:700 14px Helvetica,Arial,sans-serif}
+.receipt-address{font:400 13px/1.7 Helvetica,Arial,sans-serif;white-space:pre-line;color:#555;overflow-wrap:anywhere}
+.receipt-note{margin:0;font:400 11px/1.6 Helvetica,Arial,sans-serif;color:#888}
+.receipt-prices{display:flex;flex-direction:column;gap:22px}
+.receipt-prices>div{display:flex;justify-content:space-between;gap:14px;font:700 12px Helvetica,Arial,sans-serif}
+.receipt-prices .receipt-total{align-items:center;border-top:1px solid #111;padding-top:24px}
+.receipt-total strong{font:400 clamp(35px,3.6vw,55px)/1 Didot,Georgia,serif;letter-spacing:-.05em}
+.receipt-payment-note{margin:25px 0 34px;font:400 12px/1.6 Helvetica,Arial,sans-serif;color:#777}
+.receipt-action{display:block;padding:23px 18px;text-align:center;background:#111;color:#fff;text-decoration:none;font:700 11px Helvetica,Arial,sans-serif;letter-spacing:1.6px}
+.receipt-action:hover{background:var(--glh-accent)}
+.receipt-secondary-action{display:block;margin-top:23px;align-self:center;color:#111;text-decoration:none;border-bottom:1px solid #111;padding-bottom:6px;font:700 11px Helvetica,Arial,sans-serif;letter-spacing:1.2px}
+@media(max-width:960px){.receipt-facts{grid-template-columns:repeat(2,1fr)}.receipt-facts>div{border-bottom:1px solid #ddd}.receipt-columns{grid-template-columns:1fr}.receipt-products{border-right:0}.receipt-summary{border-top:1px solid #111}.receipt-hero{padding:70px 5% 55px}}
+@media(max-width:520px){.receipt-hero{padding:58px 24px 48px}.receipt-hero h1{font-size:clamp(53px,13vw,78px)}.receipt-facts>div{padding:24px 18px}.receipt-facts strong{font-size:13px}.receipt-item{grid-template-columns:112px minmax(0,1fr);min-height:125px}.receipt-item img{width:112px;height:100%;min-height:125px}.receipt-item-content{padding:20px 14px}.receipt-item-name{font-size:22px}.receipt-item-price{grid-column:2;padding:0 14px 17px}.receipt-summary{padding:40px 24px 55px}}

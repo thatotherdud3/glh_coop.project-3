@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GLH | Order Confirmation</title>
+  <link rel="stylesheet" href="style1.css?v=glh-secure-confirm-20261121" />
+  <link rel="stylesheet" href="order-confirmation.css?v=glh-secure-confirm-20261121" />
+</head>
+<body class="receipt-page">
+  <input type="checkbox" id="menu-toggle" class="menu-checkbox" />
+  <nav class="global-nav">
+    <div class="nav-left">
+      <label for="menu-toggle" class="nav-icon" aria-label="Open menu">
+        <div class="line-1"></div><div class="line-2"></div><div class="line-3"></div>
+      </label>
+    </div>
+    <div class="logo"><a href="index.html">G L H // CO-OP</a></div>
+    <div class="nav-right"><a href="cart.html" class="nav-item">CART [0]</a></div>
+  </nav>
+  <aside class="system-menu" id="system-menu">
+    <div class="menu-matrix">
+      <span class="system-label text-sage" style="display:block;margin-bottom:60px">System Wayfinding</span>
+      <nav class="menu-nav">
+        <a href="index.html" class="menu-link">Home</a>
+        <a href="products.html" class="menu-link">Shop</a>
+        <a href="farmers.html" class="menu-link">Our Farmers</a>
+        <a href="producer-login.html" class="menu-link">Producer Node</a>
+        <a href="customer-portal.html" class="menu-link">Customer Node</a>
+        <a href="batch-trace.html" class="menu-link">Batch Trace</a>
+        <a href="drop-nodes.html" class="menu-link">Delivery/Collection</a>
+        <a href="kitchen-hub.html" class="menu-link">Kitchen Hub</a>
+        <a href="plant-knowledge.html" class="menu-link">Plant Knowledge</a>
+      </nav>
+    </div>
+  </aside>
+  <label for="menu-toggle" class="menu-shield" id="menu-shield"></label>
+
+  <main class="receipt-main">
+    <header class="receipt-hero">
+      <span class="receipt-eyebrow">TRANSACTION LEDGER / ORDER ENTRY</span>
+      <h1>Order Recorded.</h1>
+      <p>We've recorded your order in the GLH CO-OP ledger. You can review its details and track fulfilment below.</p>
+    </header>
+
+    <section class="receipt-loading" id="receipt-status" role="status" aria-live="polite">LOADING ORDER RECORD…</section>
+    <a class="receipt-sign-in" id="receipt-sign-in" href="customer-login.html" hidden>SIGN IN TO VIEW YOUR ORDER</a>
+
+    <div id="receipt-content" hidden>
+      <section class="receipt-facts" aria-label="Order details">
+        <div><span class="receipt-label">ORDER REFERENCE</span><strong id="receipt-number">—</strong></div>
+        <div><span class="receipt-label">DATE REGISTERED</span><strong id="receipt-date">—</strong></div>
+        <div><span class="receipt-label">FULFILMENT STATUS</span><strong id="receipt-fulfilment">—</strong></div>
+        <div><span class="receipt-label">PAYMENT STATUS</span><strong id="receipt-payment">NOT PROCESSED</strong></div>
+      </section>
+
+      <div class="receipt-columns">
+        <section class="receipt-products" aria-labelledby="receipt-items-heading">
+          <div class="receipt-section-heading">
+            <span class="receipt-label">01 / ORDER CONTENTS</span>
+            <h2 id="receipt-items-heading">Your Produce.</h2>
+          </div>
+          <div id="receipt-items"></div>
+        </section>
+        <aside class="receipt-summary" aria-label="Collection and order total">
+          <span class="receipt-label">02 / ROUTING</span>
+          <h2>Delivery Details.</h2>
+          <div class="receipt-route">
+            <span class="receipt-label">METHOD</span>
+            <strong id="receipt-method">—</strong>
+            <span class="receipt-address" id="receipt-destination"></span>
+            <p id="receipt-route-note" class="receipt-note"></p>
+          </div>
+          <div class="receipt-prices">
+            <div><span>PRODUCE</span><span id="receipt-subtotal">£0.00</span></div>
+            <div><span>DELIVERY</span><span id="receipt-delivery">£0.00</span></div>
+            <div class="receipt-total"><span>ORDER VALUE</span><strong id="receipt-total">£0.00</strong></div>
+          </div>
+          <p class="receipt-payment-note">This demo records orders but does not take payment or confirm a delivery or collection booking.</p>
+          <a class="receipt-action" href="customer-portal.html">VIEW CUSTOMER TERMINAL ↗</a>
+          <a class="receipt-secondary-action" href="products.html">CONTINUE SOURCING</a>
+        </aside>
+      </div>
+    </div>
+  </main>
+  <script src="app.js?v=glh-secure-confirm-20261121"></script>
+  <script src="order-confirmation.js?v=glh-secure-confirm-20261121"></script>
+</body>
+</html>
