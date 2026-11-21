@@ -7,7 +7,7 @@ import re
 import secrets
 from password_security import hash_password, verify_password, needs_upgrade
 from datetime import date
-from urllib.parse import unquote, urlsplit
+from urllib.parse import unquote, urlsplit, parse_qs
 from http.server import SimpleHTTPRequestHandler, HTTPServer
 from email.parser import BytesParser
 from producer_metrics import (
@@ -188,6 +188,35 @@ class NativeAPIHandler(SimpleHTTPRequestHandler):
             self.close_connection = True
 
     def do_GET(self):
+        if urlsplit(self.path).path == "/checkout/status":
+            connection = None
+            try:
+                params = parse_qs(urlsplit(self.path).query)
+                key = params.get("key", [None])[0]
+                if not isinstance(key, str) or not re.fullmatch(r"[A-Za-z0-9._-]{8,128}", key):
+                    self.send_json_result(400, {"message": "Invalid checkout reference."})
+                    return
+                connection = get_db_connection()
+                customer_id = customer_from_request(connection, self.headers)
+                if customer_id is None:
+                    self.send_json_result(401, {"message": "Sign in to check the last order."})
+                    return
+                recorded = connection.execute(
+                    "SELECT order_id FROM checkout_requests WHERE customer_id = ? AND checkout_key = ?",
+                    (customer_id, key)
+                ).fetchone()
+                if recorded is None:
+                    self.send_json_result(404, {"message": "No order recorded for this checkout attempt."})
+                else:
+                    self.send_json_result(200, {"status": "success", "order_id": recorded["order_id"]})
+            except sqlite3.Error as error:
+                print(f"CHECKOUT STATUS ERROR: {error}")
+                self.send_json_result(500, {"message": "Unable to verify the previous order."})
+            finally:
+                if connection is not None:
+                    connection.close()
+            return
+
         if urlsplit(self.path).path == "/session":
             connection = None
             try:
