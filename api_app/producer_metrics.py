@@ -3,6 +3,7 @@ import hashlib
 import hmac
 import secrets
 import time
+from http.cookies import SimpleCookie
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 
@@ -34,6 +35,26 @@ def producer_from_token(connection, header):
         (producer_id,),
     ).fetchone()
     return producer_id if found else None
+
+
+def producer_from_request(connection, headers):
+    """Use the signed HttpOnly cookie, falling back to the existing bearer token."""
+    raw_cookie = headers.get("Cookie", "")
+    if raw_cookie:
+        cookies = SimpleCookie()
+        try:
+            cookies.load(raw_cookie)
+            ticket = cookies.get("glh_producer_session")
+            if ticket:
+                authenticated = producer_from_token(
+                    connection, "Bearer " + ticket.value
+                )
+                if authenticated is not None:
+                    return authenticated
+        except Exception:
+            # Malformed cookie values never authenticate a request.
+            pass
+    return producer_from_token(connection, headers.get("Authorization"))
 
 
 def ensure_producer_metrics_schema(connection):

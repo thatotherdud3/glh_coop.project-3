@@ -9,7 +9,7 @@ from http.server import SimpleHTTPRequestHandler, HTTPServer
 from email.parser import BytesParser
 from producer_metrics import (
     ensure_producer_metrics_schema, fulfil_order_item,
-    get_producer_dashboard, issue_producer_token, producer_from_token,
+    get_producer_dashboard, issue_producer_token, producer_from_request,
 )
 
 PORT = 8000
@@ -160,9 +160,7 @@ class NativeAPIHandler(SimpleHTTPRequestHandler):
             connection = None
             try:
                 connection = get_db_connection()
-                producer_id = producer_from_token(
-                    connection, self.headers.get("Authorization")
-                )
+                producer_id = producer_from_request(connection, self.headers)
                 if producer_id is None:
                     self.send_json_result(401, {
                         "message": "Producer session expired. Sign in again."
@@ -311,6 +309,21 @@ class NativeAPIHandler(SimpleHTTPRequestHandler):
 
     def do_POST(self):
 
+        if self.path == "/producer/logout":
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Cache-Control", "no-store")
+            self.send_header(
+                "Set-Cookie",
+                "glh_producer_session=; Path=/; Max-Age=0; "
+                "HttpOnly; SameSite=Strict"
+            )
+            body = b'{"status":"success"}'
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+            return
+
         # registration endpoint
         if self.path == '/register':
             try:
@@ -403,9 +416,27 @@ class NativeAPIHandler(SimpleHTTPRequestHandler):
                         target_node = "producer-portal.html" if role == "producer" else "customer-portal.html"
 
                     print(f"SECURITY LOG: Authentication successful for [{email}]. Node assignment: {role.upper()}.")
+                    session_token = (
+                        issue_producer_token(user["user_id"])
+                        if role == "producer" else None
+                    )
                     self.send_response(200)
                     self.send_header('Access-Control-Allow-Origin', '*')
                     self.send_header('Content-type', 'application/json')
+                    if session_token:
+                        # HttpOnly: metrics authentication no longer depends on
+                        # the browser persisting a localStorage token.
+                        self.send_header(
+                            "Set-Cookie",
+                            "glh_producer_session=" + session_token
+                            + "; Path=/; Max-Age=86400; HttpOnly; SameSite=Strict"
+                        )
+                    else:
+                        self.send_header(
+                            "Set-Cookie",
+                            "glh_producer_session=; Path=/; Max-Age=0; "
+                            "HttpOnly; SameSite=Strict"
+                        )
                     self.end_headers()
                     self.wfile.write(json.dumps({
                         "status": "success",
@@ -413,8 +444,7 @@ class NativeAPIHandler(SimpleHTTPRequestHandler):
                         "user_id": user["user_id"],
                         "full_name": user["full_name"],
                         "redirect_url": target_node,
-                        "session_token": issue_producer_token(user["user_id"])
-                            if role == "producer" else None
+                        "session_token": session_token
                     }).encode('utf-8'))
                 else:
                     # if the SQL statement returned nothing the credentials were wrong
@@ -629,9 +659,7 @@ class NativeAPIHandler(SimpleHTTPRequestHandler):
                     self.send_json_result(400, {"message": "Invalid item ID."})
                     return
                 connection = get_db_connection()
-                producer_id = producer_from_token(
-                    connection, self.headers.get("Authorization")
-                )
+                producer_id = producer_from_request(connection, self.headers)
                 if producer_id is None:
                     self.send_json_result(401, {
                         "message": "Producer session expired. Sign in again."

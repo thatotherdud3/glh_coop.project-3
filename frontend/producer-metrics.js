@@ -20,14 +20,14 @@
 
   async function request(path, options) {
     const token = localStorage.getItem("session_producer_token");
-    if (!token) {
-      expireSession();
-      throw new Error("Producer login required.");
-    }
+    const headers = token ? { Authorization: "Bearer " + token } : {};
+    // Requests to the local GLH API include the HttpOnly producer cookie.
+    // Missing localStorage tokens no longer force a redirect before the API call.
     const response = await fetch(origin + path, {
       ...options,
       cache: "no-store",
-      headers: { Authorization: "Bearer " + token },
+      credentials: "same-origin",
+      headers,
     });
     let data;
     try { data = await response.json(); }

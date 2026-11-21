@@ -419,11 +419,8 @@ if (authFormObj) {
         .then((data) => {
           if (data.status === "success") {
             console.log(`AUTH SUCCESS: Role: ${data.role.toUpperCase()}`);
-            if (data.role === "producer" && !data.session_token) {
-              console.error("Producer session token missing from login response.");
-              alert("Producer session could not be established. Restart the GLH API and sign in again.");
-              return;
-            }
+            // A signed session is also supplied as a first-party HttpOnly cookie.
+            // Older localStorage-based sessions remain compatible.
 
             // saves the session data to local storage
             localStorage.setItem("session_user_id", data.user_id);
@@ -435,12 +432,8 @@ if (authFormObj) {
               localStorage.removeItem("session_producer_token");
             }
 
-            // A producer dashboard requires a stored signed session token.
-            if (data.role === "producer" &&
-                !localStorage.getItem("session_producer_token")) {
-              alert("Unable to save producer session. Check browser storage settings.");
-              return;
-            }
+            // The dashboard can authenticate through the HttpOnly cookie,
+            // even if the legacy localStorage token was not persisted.
 
             // redirects to the correct portal based on role
             window.location.href = data.redirect_url;
@@ -473,16 +466,9 @@ function initSessionUI() {
     window.location.href = "customer-login.html";
     return;
   }
-  if (
-    page === "producer-portal.html" &&
-    (!userId || role !== "producer" || !producerToken)
-  ) {
-    // An old browser session without the new signed producer token
-    // must sign in again. Do not loop between the two pages.
-    localStorage.removeItem("session_user_id");
-    localStorage.removeItem("session_role");
-    localStorage.removeItem("session_full_name");
-    localStorage.removeItem("session_producer_token");
+  if (page === "producer-portal.html" && (!userId || role !== "producer")) {
+    // The backend authenticates dashboard requests with its signed cookie;
+    // an absent localStorage token is not a reason to bounce the page.
     window.location.replace("producer-login.html");
     return;
   }
@@ -492,17 +478,8 @@ function initSessionUI() {
     window.location.href = "customer-portal.html";
     return;
   }
-  if (page === "producer-login.html" && userId && role === "producer") {
-    if (producerToken) {
-      window.location.replace("producer-portal.html");
-      return;
-    }
-    // Stale session: retain the login form instead of redirecting to
-    // the producer portal without valid credentials.
-    localStorage.removeItem("session_user_id");
-    localStorage.removeItem("session_role");
-    localStorage.removeItem("session_full_name");
-  }
+  // Keep the producer login form available when visited explicitly.
+  // The API replaces any old producer session when credentials are submitted.
 
   // injects the logout button into the nav if the user is logged in
   if (userId) {
@@ -549,19 +526,27 @@ function initSessionUI() {
   }
 }
 
-function logout() {
-  const userId = localStorage.getItem("session_user_id");
-  // removes the session scoped consent key so the next user sees the form
-  if (userId) localStorage.removeItem(`glh_consent_${userId}`);
-  localStorage.removeItem("session_user_id");
-  localStorage.removeItem("session_role");
-  localStorage.removeItem("session_full_name");
-  localStorage.removeItem("session_producer_token");
-  // clears the cart so it doesnt carry over to the next session
-  cart = [];
-  localStorage.removeItem("glh_cart");
-  // returns the user to the homepage
-  window.location.href = "index.html";
+async function logout() {
+  // Clear the HttpOnly session cookie server-side before navigating away.
+  // The frontend also clears its existing local session state.
+  try {
+    await fetch("http://127.0.0.1:8000/producer/logout", {
+      method: "POST",
+      credentials: "same-origin",
+    });
+  } catch (error) {
+    console.warn("Could not clear the server cookie:", error);
+  } finally {
+    const userId = localStorage.getItem("session_user_id");
+    if (userId) localStorage.removeItem(`glh_consent_${userId}`);
+    localStorage.removeItem("session_user_id");
+    localStorage.removeItem("session_role");
+    localStorage.removeItem("session_full_name");
+    localStorage.removeItem("session_producer_token");
+    cart = [];
+    localStorage.removeItem("glh_cart");
+    window.location.href = "index.html";
+  }
 }
 
 function deleteAccount() {
