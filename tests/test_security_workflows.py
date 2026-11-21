@@ -471,6 +471,7 @@ class SecurityWorkflowTests(unittest.TestCase):
         for value in ("", None, "Contains: ", "Contains: Milk | May contain: ",
                       "Contains: None of the listed allergens, Milk",
                       "No Allergens Present; May contain: Peanuts",
+                      "Contains: No Allergens Present | May contain: Peanuts",
                       "Contains: " + "x" * 501):
             with self.subTest(value=value):
                 with self.assertRaises(ValueError):

@@ -175,6 +175,8 @@ def validate_allergen_declaration(value):
             raise ValueError("Do not combine the absence declaration with named allergens.")
         if contains.startswith("no allergens present") and contains != "no allergens present":
             raise ValueError("Do not combine the absence declaration with named allergens.")
+        if contains == "no allergens present" and len(components) == 2:
+            raise ValueError("Use the more precise ingredient absence declaration when cross contact is possible.")
     elif "no allergens present" in lowered and "may contain" in lowered:
         raise ValueError("Use separate ingredients and possible contact declarations.")
     return declaration
