@@ -85,6 +85,36 @@ function addToCart(id, name, price, stock, requestedQuantity = 1, productMetadat
   return true;
 }
 
+/* shop search: filter the already loaded inventory without extra requests */
+let shopInventory = [];
+
+function renderShopSearch() {
+  const grid = document.getElementById("shop-inventory-grid");
+  if (!grid) return;
+  const input = document.getElementById("shop-search");
+  const query = (input?.value || "").trim().toLocaleLowerCase("en-GB");
+  const results = shopInventory.filter((item) =>
+    [item.product_name, item.producer_name, item.batch_number, item.product_description]
+      .some((value) => String(value || "").toLocaleLowerCase("en-GB").includes(query))
+  );
+  populateShop(results, grid);
+  if (!results.length) {
+    const empty = document.createElement("p");
+    empty.className = "shop-search-empty";
+    empty.textContent = shopInventory.length
+      ? "No produce matches your search. Try another name, producer or batch."
+      : "No produce is currently listed.";
+    grid.appendChild(empty);
+  }
+  const count = document.getElementById("shop-search-count");
+  if (count) count.textContent = `SHOWING ${results.length} OF ${shopInventory.length} PRODUCTS`;
+}
+
+function initShopSearch() {
+  const input = document.getElementById("shop-search");
+  if (input) input.addEventListener("input", renderShopSearch);
+}
+
 /* inventory retrieval and distribution */
 
 function fetchInventoryData(url) {
@@ -109,7 +139,10 @@ function distributeData(inventory) {
   const shopGrid = document.getElementById("shop-inventory-grid");
   const ledgerTable = document.getElementById("producer-ledger-body");
 
-  if (shopGrid) populateShop(inventory, shopGrid);
+  if (shopGrid) {
+    shopInventory = Array.isArray(inventory) ? inventory : [];
+    renderShopSearch();
+  }
   if (ledgerTable) {
     // filters the inventory so the ledger only shows the logged in producers stock
     const activeProducerId = parseInt(
@@ -607,71 +640,109 @@ if (authFormObj) {
 
 /* session management, page guards and logout */
 
-function initSessionUI() {
-  const userId = localStorage.getItem("session_user_id");
-  const role = localStorage.getItem("session_role");
-  const name = localStorage.getItem("session_full_name");
-  const producerToken = localStorage.getItem("session_producer_token");
-  const page = window.location.pathname.split("/").pop() || "index.html";
+let verifiedSession = null;
 
-  // page guards: bounce unauthenticated users back to login
-  // Customer Portal verifies its identity through /session, not localStorage.
-  // Using a stale browser ID here can cause a redirect or order-history loop.
-  if (page === "producer-portal.html" && (!userId || role !== "producer")) {
-    // The backend authenticates dashboard requests with its signed cookie;
-    // an absent localStorage token is not a reason to bounce the page.
-    window.location.replace("producer-login.html");
-    return;
+async function initSessionUI() {
+  const page = window.location.pathname.split("/").pop() || "index.html";
+  const producerPage = page === "producer-portal.html";
+  const customerPage = page === "customer-portal.html";
+  let user = null;
+
+  // Cookies, not browser storage, determine the authenticated identity.
+  try {
+    const response = await fetch("/session", {
+      credentials: "same-origin", cache: "no-store"
+    });
+    if (response.ok) {
+      user = await response.json();
+      if (!["customer", "producer"].includes(user.role)) user = null;
+    } else if (response.status !== 401) {
+      throw new Error("Could not verify your sign-in (HTTP " + response.status + ").");
+    }
+  } catch (error) {
+    console.error("SESSION VERIFICATION ERROR:", error);
+    if (producerPage || customerPage) {
+      const status = document.getElementById("producer-metrics-status");
+      if (status) status.textContent = "Unable to verify your session. Check the API and reload.";
+      const history = document.getElementById("order-history-body");
+      if (history) history.innerHTML = '<tr><td colspan="5">Unable to verify session. Reload after checking your connection.</td></tr>';
+      return false;
+    }
+  }
+  verifiedSession = user;
+  if (user) {
+    localStorage.setItem("session_user_id", String(user.user_id));
+    localStorage.setItem("session_role", user.role);
+    localStorage.setItem("session_full_name", user.full_name || "");
+  } else {
+    ["session_user_id", "session_role", "session_full_name", "session_producer_token"]
+      .forEach((key) => localStorage.removeItem(key));
   }
 
-  // stops any logged in user from seeing the login form again
-  // Customer login is always accessible so expired sessions can sign in again.
-  // Keep the producer login form available when visited explicitly.
-  // The API replaces any old producer session when credentials are submitted.
+  if (producerPage && (!user || user.role !== "producer")) {
+    window.location.replace("producer-login.html?session=expired");
+    return false;
+  }
+  if (customerPage && !user) {
+    window.location.replace("customer-login.html?session=expired");
+    return false;
+  }
 
-  // injects the logout button into the nav if the user is logged in
-  if (userId) {
+  // Send authenticated members to their existing portal, not back to login.
+  const nodeLinks = document.querySelectorAll(".menu-link");
+  nodeLinks.forEach((link) => {
+    const target = link.getAttribute("href");
+    if (target === "producer-login.html" && user?.role === "producer") {
+      link.href = "producer-portal.html";
+    }
+    if (target === "customer-login.html" && user) {
+      link.href = "customer-portal.html";
+    }
+  });
+
+  if (user) {
     const navRight = document.querySelector(".nav-right");
     if (navRight && !document.getElementById("logout-btn")) {
       const logoutBtn = document.createElement("a");
       logoutBtn.href = "#";
       logoutBtn.className = "nav-item";
       logoutBtn.id = "logout-btn";
-      logoutBtn.innerText = "LOGOUT";
-
+      logoutBtn.textContent = "LOGOUT";
       navRight.appendChild(logoutBtn);
-
-      logoutBtn.addEventListener("click", function (e) {
-        e.preventDefault();
+      logoutBtn.addEventListener("click", (event) => {
+        event.preventDefault();
         logout();
       });
     }
-  }
-
-  // updates the producer name in the terminal header
-  const farmerNameSlot = document.getElementById("active-farmer-name");
-  const farmNameSlot = document.getElementById("active-farm-name");
-  if (farmerNameSlot && name) {
-    farmerNameSlot.innerText = name.toUpperCase();
-    if (farmNameSlot) {
-      farmNameSlot.innerText = `TERMINAL // ${name.toUpperCase()}`;
+    if (page === "producer-login.html" && user.role === "producer") {
+      window.location.replace("producer-portal.html");
+      return false;
+    }
+    if (page === "customer-login.html") {
+      window.location.replace("customer-portal.html");
+      return false;
     }
   }
 
-  // updates the welcome message on the customer portal with the users first name
+  const name = user?.full_name || "";
+  const farmerNameSlot = document.getElementById("active-farmer-name");
+  const farmNameSlot = document.getElementById("active-farm-name");
+  if (farmerNameSlot && name) {
+    farmerNameSlot.textContent = name.toUpperCase();
+    if (farmNameSlot) farmNameSlot.textContent = "TERMINAL // " + name.toUpperCase();
+  }
   const welcomeTitle = document.getElementById("welcome-title");
   if (welcomeTitle && name) {
-    welcomeTitle.innerText = `Welcome Back, ${name.split(" ")[0]}.`;
+    welcomeTitle.textContent = "Welcome Back, " + name.split(" ")[0] + ".";
   }
-
-  // wires up the manage account button if it exists on this page
   const manageBtn = document.getElementById("manage-account-btn");
   if (manageBtn) {
-    manageBtn.addEventListener("click", function (e) {
-      e.preventDefault();
+    manageBtn.addEventListener("click", (event) => {
+      event.preventDefault();
       showAccountOptions();
     });
   }
+  return true;
 }
 
 async function logout() {
@@ -685,8 +756,6 @@ async function logout() {
   } catch (error) {
     console.warn("Could not clear the server cookie:", error);
   } finally {
-    const userId = localStorage.getItem("session_user_id");
-    if (userId) localStorage.removeItem(`glh_consent_${userId}`);
     localStorage.removeItem("session_user_id");
     localStorage.removeItem("session_role");
     localStorage.removeItem("session_full_name");
@@ -713,83 +782,110 @@ async function deleteAccount() {
   }
 }
 
-/* cookie consent wall */
+/* cookie preferences are per browser, independent of which account is signed in */
+const COOKIE_CONSENT_KEY = "glh_cookie_consent_v1";
 
 function initConsentWall() {
-  const overlay = document.getElementById("consent-intercept");
-  if (!overlay) return;
-
-  // scopes the consent key to the logged in user so each person sees the form once
-  const userId = localStorage.getItem("session_user_id");
-  const consentKey = userId ? `glh_consent_${userId}` : "glh_consent_anon";
-
-  // hides the overlay if this user has already given consent
-  if (localStorage.getItem(consentKey)) {
+  let overlay = document.getElementById("consent-intercept");
+  // The homepage contains the editorial consent markup. Other entry pages
+  // receive the same popup so first-time visitors see it before opting in.
+  if (!overlay) {
+    overlay = document.createElement("div");
+    overlay.id = "consent-intercept";
+    overlay.className = "intercept-overlay";
+    overlay.setAttribute("role", "dialog");
+    overlay.setAttribute("aria-modal", "true");
+    overlay.setAttribute("aria-labelledby", "consent-title");
     overlay.style.display = "none";
-    return;
+    overlay.innerHTML = `
+      <div class="intercept-modal">
+        <div class="intercept-header">
+          <span class="system-label text-blue">[GREENFIELD_DATA_PROTOCOL_]</span>
+          <h2 class="intercept-title" id="consent-title">We Value Your Privacy</h2>
+        </div>
+        <div class="intercept-body">
+          <p>GLH CO-OP uses essential browser storage and cookies for the cart
+          and secure account sessions. Optional analytics and marketing remain
+          off unless you opt in.</p>
+          <p>Your preference stays saved in this browser across account
+          changes. This demo does not currently enable third-party analytics
+          or marketing.</p>
+        </div>
+        <form class="intercept-form" id="consent-form">
+          <div class="consent-options">
+            <label class="allergen-checkbox"><input type="checkbox" checked disabled>
+              <span class="custom-box"></span> STRICTLY NECESSARY</label>
+            <label class="allergen-checkbox"><input type="checkbox" id="consent-analytics">
+              <span class="custom-box"></span> ANALYTICS &amp; PERFORMANCE</label>
+            <label class="allergen-checkbox"><input type="checkbox" id="consent-marketing">
+              <span class="custom-box"></span> MARKETING &amp; LOYALTY</label>
+          </div>
+          <div class="intercept-actions">
+            <button type="button" class="system-btn ghost-btn" id="reject-optional-btn">REJECT OPTIONAL</button>
+            <button type="submit" class="system-btn ghost-btn">ACCEPT SELECTED</button>
+            <button type="button" class="system-btn blue-btn" id="accept-all-btn">ACCEPT ALL</button>
+          </div>
+        </form>
+      </div>`;
+    document.body.prepend(overlay);
   }
+  // Allow preferences to be revised from the footer on any storefront page.
+  const footer = document.querySelector(".massive-footer .footer-content");
+  if (footer && !document.getElementById("cookie-preferences-btn")) {
+    const button = document.createElement("button");
+    button.id = "cookie-preferences-btn";
+    button.className = "cookie-preferences-toggle";
+    button.type = "button";
+    button.textContent = "COOKIE PREFERENCES";
+    footer.appendChild(button);
+  }
+  let existing = null;
+  try { existing = JSON.parse(localStorage.getItem(COOKIE_CONSENT_KEY) || "null"); }
+  catch (_) { existing = null; }
 
-  overlay.style.display = "flex";
-
-  // wires up the accept selected button
+  overlay.style.display = existing ? "none" : "flex";
+  if (existing) {
+    document.getElementById("consent-analytics").checked = Boolean(existing.analytics);
+    document.getElementById("consent-marketing").checked = Boolean(existing.marketing);
+  }
   const form = document.getElementById("consent-form");
-  if (form) {
-    form.addEventListener("submit", function (e) {
-      e.preventDefault();
-      const analytics = document.getElementById("consent-analytics").checked;
-      const marketing = document.getElementById("consent-marketing").checked;
-      submitConsent(analytics, marketing, consentKey);
-    });
-  }
-
-  // wires up the accept all button which passes true for both flags
-  const acceptAllBtn = document.getElementById("accept-all-btn");
-  if (acceptAllBtn) {
-    acceptAllBtn.addEventListener("click", function () {
-      submitConsent(true, true, consentKey);
-    });
-  }
+  if (form) form.addEventListener("submit", (event) => {
+    event.preventDefault();
+    submitConsent(
+      document.getElementById("consent-analytics").checked,
+      document.getElementById("consent-marketing").checked
+    );
+  });
+  document.getElementById("accept-all-btn")?.addEventListener("click", () =>
+    submitConsent(true, true));
+  document.getElementById("reject-optional-btn")?.addEventListener("click", () =>
+    submitConsent(false, false));
+  document.getElementById("cookie-preferences-btn")?.addEventListener("click", () => {
+    overlay.style.display = "flex";
+    document.getElementById("consent-analytics").focus();
+  });
 }
 
-function submitConsent(analytics, marketing, consentKey) {
-  const userId = localStorage.getItem("session_user_id");
-  // generates a unique token for this consent record
-  const token =
-    "GLH-" +
-    (userId || "ANON") +
-    "-" +
-    Date.now() +
-    "-" +
-    Math.random().toString(36).substr(2, 9).toUpperCase();
+function submitConsent(analytics, marketing) {
+  const token = "GLH-" + Date.now() + "-" +
+    Math.random().toString(36).slice(2, 11).toUpperCase();
+  const choice = { analytics: Boolean(analytics), marketing: Boolean(marketing),
+    recorded_at: new Date().toISOString(), token };
+  // Store the actual choice, not just a dismissal flag; keep it across logout.
+  localStorage.setItem(COOKIE_CONSENT_KEY, JSON.stringify(choice));
+  const overlay = document.getElementById("consent-intercept");
+  if (overlay) overlay.style.display = "none";
 
-  // posts the consent preferences to the API for GDPR record keeping
   fetch("/consent", {
     method: "POST",
+    credentials: "same-origin",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ token, analytics, marketing }),
-  })
-    .then((res) => res.json())
-    .then((data) => {
-      if (data.status === "success") {
-        // saves the token to local storage so the modal doesnt show again
-        localStorage.setItem(consentKey, token);
-        console.log(`GDPR LOG: Consent committed — token: ${token}`);
-      }
-    })
-    .catch((err) =>
-      console.warn("CONSENT POST FAILED (server may be offline):", err),
-    )
-    .finally(() => {
-      // always hides the overlay even if the server was unreachable
-      const overlay = document.getElementById("consent-intercept");
-      if (overlay) overlay.style.display = "none";
-      // persists the dismissal locally if the server call failed
-      if (!localStorage.getItem(consentKey)) {
-        localStorage.setItem(consentKey, "local-" + Date.now());
-      }
-    });
+    body: JSON.stringify({ token, analytics: choice.analytics, marketing: choice.marketing })
+  }).then(readApiResponse).catch((error) => {
+    // The site remains usable offline; a local preference is not a server record.
+    console.warn("Consent preference was saved locally but not recorded by the API:", error);
+  });
 }
-
 
 /* account management modal */
 
@@ -1212,7 +1308,7 @@ async function recoverCompletedCheckout() {
 
 async function initiateCheckout() {
   if (checkoutInFlight) return; // Guard before any asynchronous request.
-  if (localStorage.getItem("session_role") !== "customer" ||
+  if (!["customer", "producer"].includes(localStorage.getItem("session_role")) ||
       !localStorage.getItem("session_user_id")) {
     showSystemFeedback("cart-feedback", "Sign in through Customer Node to place this order. Your cart will be saved.", "error");
     const signIn = document.getElementById("cart-sign-in-link");
@@ -1369,12 +1465,12 @@ async function initCustomerPortal() {
       throw new Error("Unable to verify customer session (" + response.status + ").");
     }
     const user = await response.json();
-    if (user.role !== "customer") {
+    if (!["customer", "producer"].includes(user.role)) {
       window.location.replace("customer-login.html?session=customer-required");
       return;
     }
     localStorage.setItem("session_user_id", String(user.user_id));
-    localStorage.setItem("session_role", "customer");
+    localStorage.setItem("session_role", user.role);
     localStorage.setItem("session_full_name", user.full_name || "");
     const welcome = document.getElementById("welcome-title");
     if (welcome) welcome.textContent = "Welcome Back, " +
@@ -1388,11 +1484,12 @@ async function initCustomerPortal() {
 
 /* single DOMContentLoaded entry point */
 
-document.addEventListener("DOMContentLoaded", () => {
-  // runs on every page load
-  initSessionUI();
+document.addEventListener("DOMContentLoaded", async () => {
+  // Verify a signed server session before rendering protected portal data.
+  if (!(await initSessionUI())) return;
   updateCartCount();
   initConsentWall();
+  initShopSearch();
 
   const page = window.location.pathname.split("/").pop() || "index.html";
 

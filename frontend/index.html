@@ -4,10 +4,10 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>GLH | Collective Sourcing</title>
-    <link rel="stylesheet" href="style1.css?v=glh-reliability-edit-20261121-v2" />
+    <link rel="stylesheet" href="style1.css?v=glh-cookie-controls-20261121" />
   </head>
   <body>
-    <div class="intercept-overlay" id="consent-intercept">
+    <div class="intercept-overlay" id="consent-intercept" style="display: none">
       <div class="intercept-modal">
         <div class="intercept-header">
           <span class="system-label text-blue"
@@ -18,16 +18,14 @@
 
         <div class="intercept-body">
           <p>
-            Greenfield Local Hub (GLH) and our trusted partners use cookies and
-            collect personal data strictly for processing e-commerce orders,
-            managing the loyalty scheme, and analysing historical booking trends
-            to improve our cooperative.
+            GLH CO-OP uses essential browser storage and cookies for the cart
+            and secure account sessions. Optional analytics and marketing choices
+            are separate and remain off unless you opt in.
           </p>
           <p>
-            Please opt-in to the processing operations you consent to below.
-            This consent request is completely separate from our general Terms
-            and Conditions. You may easily withdraw or change your consent at
-            any time by visiting your Account Settings.
+            Your choice is saved in this browser, including when you switch
+            accounts. You can revisit it with Cookie Preferences below.
+            This demo does not currently enable third-party analytics or marketing.
           </p>
         </div>
 
@@ -59,6 +57,9 @@
           </div>
 
           <div class="intercept-actions">
+            <button type="button" class="system-btn ghost-btn" id="reject-optional-btn">
+              REJECT OPTIONAL
+            </button>
             <button type="submit" class="system-btn ghost-btn">
               ACCEPT SELECTED
             </button>
@@ -167,8 +168,11 @@
     <footer class="massive-footer">
       <div class="footer-content">
         <h2>TRACEABLE.<br />LOCAL.<br />VERIFIED.</h2>
+        <button type="button" class="cookie-preferences-toggle" id="cookie-preferences-btn">
+          COOKIE PREFERENCES
+        </button>
       </div>
     </footer>
-    <script src="app.js?v=glh-reliability-edit-20261121-v2"></script>
+    <script src="app.js?v=glh-session-search-consent-20261121"></script>
   </body>
 </html>

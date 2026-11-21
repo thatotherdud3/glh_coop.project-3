@@ -592,14 +592,16 @@ class NativeAPIHandler(SimpleHTTPRequestHandler):
                 if user:
                     role = user["role"]
 
-                    # blocks a customer account from accessing the producer terminal
-                    if requested_node != role:
-                        print(f"SECURITY ALERT: Hard bounce. Customer identity [{email}] attempted access via Producer Terminal.")
-                        self.send_response(403)
-                        self.send_header('Access-Control-Allow-Origin', '*')
-                        self.send_header('Content-type', 'application/json')
-                        self.end_headers()
-                        self.wfile.write(json.dumps({"status": "error", "message": "Clearance denied. Producer privileges required."}).encode('utf-8'))
+                    # Producer accounts can also use the customer shopping node.
+                    # Customer accounts still cannot access producer-only actions.
+                    if requested_node not in ("customer", "producer") or (
+                        requested_node == "producer" and role != "producer"
+                    ):
+                        print(f"SECURITY ALERT: Access denied for [{email}] at node [{requested_node}].")
+                        self.send_json_result(403, {
+                            "status": "error",
+                            "message": "This account cannot access the selected node."
+                        })
                         return
 
                     # sends the user to the correct portal based on which terminal they logged in through
