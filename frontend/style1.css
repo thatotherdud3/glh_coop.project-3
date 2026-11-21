@@ -778,6 +778,7 @@ body:has(.menu-checkbox:checked) {
   height: 100%;
   object-fit: cover;
   display: block;
+  filter: none;
 }
 
 .recipe-info {

@@ -7,6 +7,10 @@ from datetime import date
 from urllib.parse import unquote, urlsplit
 from http.server import SimpleHTTPRequestHandler, HTTPServer
 from email.parser import BytesParser
+from producer_metrics import (
+    ensure_producer_metrics_schema, fulfil_order_item,
+    get_producer_dashboard, issue_producer_token, producer_from_token,
+)
 
 PORT = 8000
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -70,6 +74,7 @@ def get_db_connection():
                     (new_name, batch, old_name),
                 )
 
+    ensure_producer_metrics_schema(conn)
     conn.commit()
     return conn
 
@@ -127,7 +132,7 @@ class NativeAPIHandler(SimpleHTTPRequestHandler):
         self.send_response(200)
         self.send_header('Access-Control-Allow-Origin', '*')
         self.send_header('Access-Control-Allow-Methods', 'GET, POST, DELETE, PUT, OPTIONS')
-        self.send_header('Access-Control-Allow-Headers', 'Content-Type')
+        self.send_header('Access-Control-Allow-Headers', 'Content-Type, Authorization')
         self.end_headers()
 
     def send_json_result(self, status_code, payload):
@@ -141,7 +146,31 @@ class NativeAPIHandler(SimpleHTTPRequestHandler):
         self.wfile.write(body)
 
     def do_GET(self):
-        if self.path.startswith("/batch-trace/"):
+        if self.path == "/producer/dashboard":
+            connection = None
+            try:
+                connection = get_db_connection()
+                producer_id = producer_from_token(
+                    connection, self.headers.get("Authorization")
+                )
+                if producer_id is None:
+                    self.send_json_result(401, {
+                        "message": "Producer session expired. Sign in again."
+                    })
+                    return
+                self.send_json_result(
+                    200, get_producer_dashboard(connection, producer_id)
+                )
+            except Exception as error:
+                print(f"PRODUCER DASHBOARD ERROR: {error}")
+                self.send_json_result(500, {
+                    "message": "Unable to retrieve producer figures."
+                })
+            finally:
+                if connection is not None:
+                    connection.close()
+
+        elif self.path.startswith("/batch-trace/"):
             code = unquote(urlsplit(self.path).path[len("/batch-trace/"):]).strip()
             if not re.fullmatch(r"[A-Za-z0-9_-]{1,100}", code):
                 self.send_json_result(400, {"message": "Enter a valid batch number."})
@@ -240,7 +269,13 @@ class NativeAPIHandler(SimpleHTTPRequestHandler):
                 # joins orders to order_items to get the item count per order, newest first
                 cursor.execute("""
                     SELECT o.order_id, o.order_time, o.total_price,
-                           COUNT(oi.item_id) as item_count
+                           COUNT(oi.item_id) as item_count,
+                           CASE
+                             WHEN COUNT(oi.item_id) = 0 THEN 'Unknown'
+                             WHEN SUM(CASE WHEN oi.fulfilled_at IS NULL THEN 1 ELSE 0 END) = 0
+                                  THEN 'Fulfilled'
+                             ELSE 'Pending'
+                           END AS fulfilment_status
                     FROM orders o
                     LEFT JOIN order_items oi ON o.order_id = oi.order_id
                     WHERE o.customer_id = ?
@@ -367,7 +402,9 @@ class NativeAPIHandler(SimpleHTTPRequestHandler):
                         "role": role,
                         "user_id": user["user_id"],
                         "full_name": user["full_name"],
-                        "redirect_url": target_node
+                        "redirect_url": target_node,
+                        "session_token": issue_producer_token(user["user_id"])
+                            if role == "producer" else None
                     }).encode('utf-8'))
                 else:
                     # if the SQL statement returned nothing the credentials were wrong
@@ -464,19 +501,31 @@ class NativeAPIHandler(SimpleHTTPRequestHandler):
                 # wraps all three write operations in a single transaction
                 connection.execute("BEGIN TRANSACTION")
 
-                # step 1: checks stock levels before writing anything to the database
+                # Validate stock using DB values and snapshot prices for reporting.
+                if not isinstance(cart_items, list) or not cart_items:
+                    connection.rollback()
+                    self.send_json_result(400, {"message": "Cart must contain products."})
+                    return
+                validated_items = []
                 for item in cart_items:
-                    cursor.execute("SELECT stock_level FROM products WHERE product_id = ?", (item['product_id'],))
-                    row = cursor.fetchone()
-                    if not row or row["stock_level"] < item['quantity']:
-                        # rolls back and rejects if any item doesnt have enough stock
+                    product_id = int(item["product_id"])
+                    quantity = int(item["quantity"])
+                    if quantity <= 0:
                         connection.rollback()
-                        self.send_response(400)
-                        self.send_header('Access-Control-Allow-Origin', '*')
-                        self.send_header('Content-type', 'application/json')
-                        self.end_headers()
-                        self.wfile.write(json.dumps({"status": "error", "message": f"Insufficient stock for {item['product_name']}"}).encode('utf-8'))
+                        self.send_json_result(400, {"message": "Quantity must be positive."})
                         return
+                    cursor.execute(
+                        "SELECT product_id, stock_level, price, producer_id, product_name "
+                        "FROM products WHERE product_id = ?", (product_id,)
+                    )
+                    product = cursor.fetchone()
+                    if not product or product["stock_level"] < quantity:
+                        connection.rollback()
+                        self.send_json_result(400, {
+                            "message": f"Insufficient stock for product {product_id}."
+                        })
+                        return
+                    validated_items.append((product, quantity))
 
                 # step 2: SQL insert to create the master order record
                 cursor.execute("INSERT INTO orders (customer_id, total_price) VALUES (?, ?)", (customer_id, total_price))
@@ -484,13 +533,21 @@ class NativeAPIHandler(SimpleHTTPRequestHandler):
                 order_id = cursor.lastrowid
 
                 # step 3: loops through the cart and inserts a line item row for each product
-                for item in cart_items:
-                    cursor.execute("INSERT INTO order_items (order_id, product_id, quantity) VALUES (?, ?, ?)",
-                                   (order_id, item['product_id'], item['quantity']))
-
-                    # SQL update decrements the stock level using a relative calculation
-                    cursor.execute("UPDATE products SET stock_level = stock_level - ? WHERE product_id = ?",
-                                   (item['quantity'], item['product_id']))
+                for product, quantity in validated_items:
+                    cursor.execute(
+                        "INSERT INTO order_items "
+                        "(order_id, product_id, quantity, producer_id, unit_price, product_name) "
+                        "VALUES (?, ?, ?, ?, ?, ?)",
+                        (
+                            order_id, product["product_id"], quantity,
+                            product["producer_id"], product["price"],
+                            product["product_name"],
+                        ),
+                    )
+                    cursor.execute(
+                        "UPDATE products SET stock_level = stock_level - ? WHERE product_id = ?",
+                        (quantity, product["product_id"]),
+                    )
 
                 # commits all three operations at once
                 connection.commit()
@@ -554,7 +611,40 @@ class NativeAPIHandler(SimpleHTTPRequestHandler):
             self.end_headers()
 
     def do_PUT(self):
-        if self.path.startswith('/users/'):
+        if self.path.startswith("/producer/fulfil/"):
+            connection = None
+            try:
+                item_id = int(self.path.split("/")[-1])
+                if item_id <= 0:
+                    self.send_json_result(400, {"message": "Invalid item ID."})
+                    return
+                connection = get_db_connection()
+                producer_id = producer_from_token(
+                    connection, self.headers.get("Authorization")
+                )
+                if producer_id is None:
+                    self.send_json_result(401, {
+                        "message": "Producer session expired. Sign in again."
+                    })
+                    return
+                if not fulfil_order_item(connection, producer_id, item_id):
+                    self.send_json_result(404, {
+                        "message": "Pending item not found for this producer."
+                    })
+                    return
+                connection.commit()
+                self.send_json_result(200, {"status": "success", "item_id": item_id})
+            except ValueError:
+                self.send_json_result(400, {"message": "Invalid item ID."})
+            except Exception as error:
+                print(f"FULFILMENT ERROR: {error}")
+                if connection is not None:
+                    connection.rollback()
+                self.send_json_result(500, {"message": "Unable to update fulfilment."})
+            finally:
+                if connection is not None:
+                    connection.close()
+        elif self.path.startswith('/users/'):
             try:
                 # extracts the user id from the URL
                 user_id = int(self.path.split('/')[-1])
