@@ -4,3 +4,8 @@
 # Python bytecode and caches.
 __pycache__/
 *.py[cod]
+
+/glh_coop.db
+/glh_coop.db-wal
+/glh_coop.db-shm
+/glh_coop.db-journal
