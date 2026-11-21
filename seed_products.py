@@ -35,6 +35,9 @@ CREATE TABLE orders (
     customer_id INTEGER NOT NULL,
     order_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     total_price REAL NOT NULL,
+    delivery_method TEXT,
+    collection_node_code TEXT,
+    delivery_address_json TEXT,
     FOREIGN KEY (customer_id) REFERENCES users(user_id)
 );
 CREATE TABLE order_items (

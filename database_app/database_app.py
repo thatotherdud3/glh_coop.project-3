@@ -50,8 +50,11 @@ def setup_database():
         order_id INTEGER PRIMARY KEY AUTOINCREMENT,
         customer_id INTEGER NOT NULL,
         order_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
-        collection_slot DATETIME NOT NULL,
+        collection_slot DATETIME,
         total_price DOUBLE(10,2) NOT NULL,
+        delivery_method TEXT,
+        collection_node_code TEXT,
+        delivery_address_json TEXT,
         FOREIGN KEY (customer_id) REFERENCES users(user_id)
     )
     """)

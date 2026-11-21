@@ -74,6 +74,14 @@ def get_db_connection():
                     (new_name, batch, old_name),
                 )
 
+    # Preserve existing orders while enabling a selected pickup node or
+    # delivery address to be stored with newly created orders.
+    order_columns = {row["name"] for row in conn.execute("PRAGMA table_info(orders)")}
+    if order_columns:
+        for name in ("delivery_method", "collection_node_code", "delivery_address_json"):
+            if name not in order_columns:
+                conn.execute(f"ALTER TABLE orders ADD COLUMN {name} TEXT")
+
     ensure_producer_metrics_schema(conn)
     conn.commit()
     return conn
@@ -546,6 +554,56 @@ class NativeAPIHandler(SimpleHTTPRequestHandler):
                     self.send_json_result(400, {"message": "Invalid delivery method."})
                     return
 
+                # The same six illustrative node IDs used on drop-nodes.html.
+                valid_nodes = {
+                    "ND-01": "Liverpool Hub", "ND-02": "Manchester Hub",
+                    "ND-03": "Cardiff Hub", "ND-04": "Glasgow Hub",
+                    "ND-05": "Belfast Hub", "ND-06": "Dublin Hub",
+                }
+                node_code = None
+                address_json = None
+                if delivery_method == "hub":
+                    node_code = payload.get("collection_node_code")
+                    if not isinstance(node_code, str) or node_code not in valid_nodes:
+                        connection.rollback()
+                        self.send_json_result(400, {
+                            "message": "Select a valid collection node before checkout."
+                        })
+                        return
+                else:
+                    address = payload.get("delivery_address")
+                    if not isinstance(address, dict):
+                        connection.rollback()
+                        self.send_json_result(400, {
+                            "message": "Enter your delivery address before checkout."
+                        })
+                        return
+                    fields = ("line1", "line2", "town", "postcode", "country")
+                    if any(not isinstance(address.get(field, ""), str) for field in fields):
+                        connection.rollback()
+                        self.send_json_result(400, {
+                            "message": "Delivery address fields must be text."
+                        })
+                        return
+                    address = {
+                        key: " ".join(address.get(key, "").strip().split())
+                        for key in fields
+                    }
+                    if (
+                        any(not address[key] for key in ("line1", "town", "postcode", "country"))
+                        or len(address["line1"]) > 120
+                        or len(address["line2"]) > 120
+                        or len(address["town"]) > 80
+                        or len(address["postcode"]) > 16
+                        or address["country"] not in ("United Kingdom", "Ireland")
+                    ):
+                        connection.rollback()
+                        self.send_json_result(400, {
+                            "message": "Enter a valid street address, town, postcode and country."
+                        })
+                        return
+                    address_json = json.dumps(address, ensure_ascii=False)
+
                 # Validate stock using DB values and snapshot prices for reporting.
                 if not isinstance(cart_items, list) or not cart_items:
                     connection.rollback()
@@ -592,7 +650,12 @@ class NativeAPIHandler(SimpleHTTPRequestHandler):
                     return
 
                 # step 2: SQL insert to create the master order record
-                cursor.execute("INSERT INTO orders (customer_id, total_price) VALUES (?, ?)", (customer_id, expected_total))
+                cursor.execute(
+                    "INSERT INTO orders "
+                    "(customer_id, total_price, delivery_method, collection_node_code, delivery_address_json) "
+                    "VALUES (?, ?, ?, ?, ?)",
+                    (customer_id, expected_total, delivery_method, node_code, address_json)
+                )
                 # captures the new order id to use as the foreign key in order_items
                 order_id = cursor.lastrowid
 
