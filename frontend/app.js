@@ -367,7 +367,7 @@ if (ledgerForm) {
     }
 
     // posts the form data to the API as multipart
-    fetch("http://127.0.0.1:8000/products", {
+    fetch("/products", {
       method: "POST",
       body: formData,
     })
@@ -379,7 +379,7 @@ if (ledgerForm) {
         alert("Stock and Visual Asset successfully committed.");
         ledgerForm.reset();
         // refreshes the ledger table to show the new entry
-        fetchInventoryData("http://127.0.0.1:8000/products");
+        fetchInventoryData("/products");
         if (typeof window.refreshProducerDashboard === "function") {
           window.refreshProducerDashboard();
         }
@@ -402,7 +402,7 @@ function deleteProduct(productId) {
     return;
 
   // sends a DELETE request to the API with the product id in the URL
-  fetch(`http://127.0.0.1:8000/products/${productId}`, {
+  fetch(`/products/${productId}`, {
     method: "DELETE",
     mode: "cors",
   })
@@ -410,7 +410,7 @@ function deleteProduct(productId) {
       if (response.ok) {
         console.log(`DELETION SUCCESS: ID ${productId} purged.`);
         // reloads the ledger so the deleted row disappears straight away
-        fetchInventoryData("http://127.0.0.1:8000/products");
+        fetchInventoryData("/products");
         if (typeof window.refreshProducerDashboard === "function") {
           window.refreshProducerDashboard();
         }
@@ -451,7 +451,7 @@ if (authFormObj) {
 
       console.log(`SYSTEM LOG: Initiating registration for [${email}]...`);
 
-      fetch("http://127.0.0.1:8000/register", {
+      fetch("/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -494,7 +494,7 @@ if (authFormObj) {
         `SYSTEM LOG: Initiating authentication for [${email}] on [${requestedNode.toUpperCase()}] node...`,
       );
 
-      fetch("http://127.0.0.1:8000/login", {
+      fetch("/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -619,7 +619,7 @@ async function logout() {
   // Clear the HttpOnly session cookie server-side before navigating away.
   // The frontend also clears its existing local session state.
   try {
-    await fetch("http://127.0.0.1:8000/producer/logout", {
+    await fetch("/producer/logout", {
       method: "POST",
       credentials: "same-origin",
     });
@@ -650,7 +650,7 @@ function deleteAccount() {
     return;
 
   // sends a DELETE request to the API with the user id in the URL
-  fetch(`http://127.0.0.1:8000/users/${userId}`, { method: "DELETE" })
+  fetch(`/users/${userId}`, { method: "DELETE" })
     .then((response) => {
       if (response.ok) {
         alert("Account successfully purged from system.");
@@ -717,7 +717,7 @@ function submitConsent(analytics, marketing, consentKey) {
     Math.random().toString(36).substr(2, 9).toUpperCase();
 
   // posts the consent preferences to the API for GDPR record keeping
-  fetch("http://127.0.0.1:8000/consent", {
+  fetch("/consent", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ token, analytics, marketing }),
@@ -790,7 +790,7 @@ function showAccountOptions() {
   // pre-fills the email field by fetching the current value from the API
   const userId = localStorage.getItem("session_user_id");
   if (userId) {
-    fetch(`http://127.0.0.1:8000/users/${userId}`)
+    fetch(`/users/${userId}`)
       .then((r) => r.json())
       .then((d) => {
         const emailInput = document.getElementById("update-email");
@@ -829,7 +829,7 @@ function submitUpdateDetails() {
   }
 
   // sends a PUT request to update the user record on the server
-  fetch(`http://127.0.0.1:8000/users/${userId}`, {
+  fetch(`/users/${userId}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ full_name: fullName, email, password }),
@@ -887,7 +887,7 @@ function calculateCartTotals() {
 async function refreshCartProductMetadata() {
   if (!cart.length) return;
   try {
-    const response = await fetch(`http://127.0.0.1:8000/products?t=${Date.now()}`, { cache: "no-store" });
+    const response = await fetch(`/products?t=${Date.now()}`, { cache: "no-store" });
     if (!response.ok) throw new Error("Inventory unavailable");
     const products = await response.json();
     if (!Array.isArray(products)) throw new Error("Invalid inventory response");
@@ -1097,7 +1097,7 @@ function initiateCheckout() {
   const routing = getCartRouting();
   if (!routing) return;
   const { total, deliveryMethod } = calculateCartTotals();
-  fetch("http://127.0.0.1:8000/checkout", {
+  fetch("/checkout", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ customer_id: userId, cart, delivery_method: deliveryMethod, total_price: total, ...routing })
@@ -1132,7 +1132,7 @@ function loadOrderHistory() {
   if (!userId) return;
 
   // fetches all orders for the logged in customer from the API
-  fetch(`http://127.0.0.1:8000/orders/${userId}`)
+  fetch(`/orders/${userId}`)
     .then((res) => res.json())
     .then((orders) => {
       tbody.innerHTML = "";
@@ -1180,7 +1180,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // only fetches inventory on pages that need it
   if (page === "products.html" || page === "producer-portal.html") {
-    fetchInventoryData("http://127.0.0.1:8000/products");
+    fetchInventoryData("/products");
   }
 
   if (page === "customer-portal.html") {
