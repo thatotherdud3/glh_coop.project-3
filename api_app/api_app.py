@@ -749,13 +749,26 @@ class NativeAPIHandler(SimpleHTTPRequestHandler):
                     self.send_json_result(400, {"message": "Cart must contain products."})
                     return
                 validated_items = []
+                seen_products = set()
                 for item in cart_items:
-                    product_id = int(item["product_id"])
-                    quantity = int(item["quantity"])
-                    if quantity <= 0:
+                    if not isinstance(item, dict):
                         connection.rollback()
-                        self.send_json_result(400, {"message": "Quantity must be positive."})
+                        self.send_json_result(400, {"message": "Invalid cart item."})
                         return
+                    try:
+                        product_id = int(item["product_id"])
+                        quantity = int(item["quantity"])
+                    except (ValueError, TypeError, KeyError):
+                        connection.rollback()
+                        self.send_json_result(400, {"message": "Invalid product ID or quantity."})
+                        return
+                    if product_id <= 0 or quantity <= 0 or product_id in seen_products:
+                        connection.rollback()
+                        self.send_json_result(400, {
+                            "message": "Products must have a positive quantity and appear only once in the cart."
+                        })
+                        return
+                    seen_products.add(product_id)
                     cursor.execute(
                         "SELECT product_id, stock_level, price, producer_id, product_name "
                         "FROM products WHERE product_id = ?", (product_id,)
@@ -1038,7 +1051,8 @@ class NativeAPIHandler(SimpleHTTPRequestHandler):
 
 
 if __name__ == "__main__":
-    server_address = ('', PORT)
+    # Local development server: do not expose sign-in and account APIs on the LAN.
+    server_address = ('127.0.0.1', PORT)
     httpd = HTTPServer(server_address, NativeAPIHandler)
     print(f"SYSTEM LOG: GLH // CO-OP Native API initialized at http://127.0.0.1:{PORT}")
     try:
