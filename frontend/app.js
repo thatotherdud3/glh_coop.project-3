@@ -5,6 +5,14 @@
 // loads the cart from local storage or starts with an empty array
 let cart = JSON.parse(localStorage.getItem("glh_cart")) || [];
 
+// Encode user-supplied or database-supplied text before adding it to HTML templates.
+function escapeHtml(value) {
+  return String(value ?? "").replace(/[&<>"']/g, (char) => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;",
+    '"': "&quot;", "'": "&#39;"
+  })[char]);
+}
+
 function saveCart() {
   // writes the current cart array back to local storage
   localStorage.setItem("glh_cart", JSON.stringify(cart));
@@ -150,7 +158,7 @@ function populateShop(inventory, container) {
     }
 
     // formats the allergen info and price for display
-    let formattedAllergens = `[${item.allergen_info.toUpperCase()}]`;
+    let formattedAllergens = `[${escapeHtml(String(item.allergen_info || "").toUpperCase())}]`;
     let formattedPrice = `£${parseFloat(item.price).toFixed(2)}`;
 
     card.innerHTML = `
@@ -158,20 +166,20 @@ function populateShop(inventory, container) {
           <img
             class="product-image"
             src="${imagePath}"
-            alt="${item.product_name}"
+            alt="${escapeHtml(item.product_name)}"
             loading="lazy"
             style="width: 100%; height: 100%; object-fit: cover; display: block; background-color: #e0e0e0;"
           />
         </div>
         <div class="product-details">
           <div class="product-header">
-            <span class="product-vendor">PRODUCER: ${item.producer_name.toUpperCase()}</span>
+            <span class="product-vendor">PRODUCER: ${escapeHtml(String(item.producer_name || "").toUpperCase())}</span>
             <div class="product-meta-right">
-              <span class="box-index">${item.batch_number}</span>
+              <span class="box-index">${escapeHtml(item.batch_number)}</span>
               <span class="status-badge ${badgeClass}">${status}</span>
             </div>
           </div>
-          <h2 class="box-title">${item.product_name}</h2>
+          <h2 class="box-title">${escapeHtml(item.product_name)}</h2>
           <span class="product-allergen">${formattedAllergens}</span>
           <span class="product-price">${formattedPrice}</span>
         </div>
@@ -287,9 +295,9 @@ function populateLedger(inventory, container) {
     // builds and appends a table row for each product
     const row = document.createElement("tr");
     row.innerHTML = `
-            <td class="sku-cell">${item.batch_number}</td>
-            <td class="name-cell">${item.product_name}</td>
-            <td class="data-cell">${item.stock_level}</td>
+            <td class="sku-cell">${escapeHtml(item.batch_number)}</td>
+            <td class="name-cell">${escapeHtml(item.product_name)}</td>
+            <td class="data-cell">${escapeHtml(item.stock_level)}</td>
             <td class="data-cell">£${parseFloat(item.price).toFixed(2)}</td>
             <td class="data-cell">
                 <span class="status-badge ${badgeClass}">${status}</span>
@@ -758,7 +766,7 @@ function showAccountOptions() {
     `;
   modal.innerHTML = `
         <span style="font-size:11px;letter-spacing:.1em;color:#666;">ACCOUNT MANAGEMENT</span>
-        <h2 style="margin:16px 0 32px;font-size:24px;">${name.toUpperCase()}</h2>
+        <h2 style="margin:16px 0 32px;font-size:24px;">${escapeHtml(name.toUpperCase())}</h2>
 
         <div id="account-main-options">
           <button onclick="showUpdateForm()" style="${_btnStyle("#111", "#fff")}">[ UPDATE DETAILS ]</button>
@@ -768,7 +776,7 @@ function showAccountOptions() {
 
         <div id="account-update-form" style="display:none;">
           <label style="font-size:11px;letter-spacing:.1em;">FULL NAME</label>
-          <input id="update-name" value="${name}" style="${_inputStyle()}" /><br/>
+          <input id="update-name" value="${escapeHtml(name)}" style="${_inputStyle()}" /><br/>
           <label style="font-size:11px;letter-spacing:.1em;margin-top:16px;display:block;">EMAIL</label>
           <input id="update-email" type="email" placeholder="your@email.com" style="${_inputStyle()}" /><br/>
           <label style="font-size:11px;letter-spacing:.1em;margin-top:16px;display:block;">NEW PASSKEY <span style="color:#999;">(leave blank to keep current)</span></label>
