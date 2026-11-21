@@ -208,7 +208,7 @@ function populateShop(inventory, container) {
     const increaseButton = quantityRow.querySelector('[data-direction="1"]');
     const remainingLabel = quantityRow.querySelector(".shop-quantity-remaining");
     const actionLabel = actionButton.querySelector("span");
-    const actionIcon = actionButton.querySelector(".action-icon");
+    const actionIconNode = actionButton.querySelector(".action-icon");
     const remainingStock = () => {
       const existing = cart.find((entry) => Number(entry.product_id) === Number(item.product_id));
       return Math.max(0, stock - (existing ? Number(existing.quantity) || 0 : 0));
@@ -225,7 +225,7 @@ function populateShop(inventory, container) {
       remainingLabel.textContent = `${remaining} AVAILABLE TO ADD`;
       actionButton.disabled = remaining === 0;
       actionLabel.textContent = stock === 0 ? "NOT AVAILABLE" : remaining === 0 ? "MAX IN CART" : "ADD TO CART";
-      actionIcon.textContent = remaining === 0 ? "/" : "+";
+      actionIconNode.textContent = remaining === 0 ? "/" : "+";
     };
     decreaseButton.addEventListener("click", () => {
       quantityInput.stepDown();
