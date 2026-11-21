@@ -419,6 +419,11 @@ if (authFormObj) {
         .then((data) => {
           if (data.status === "success") {
             console.log(`AUTH SUCCESS: Role: ${data.role.toUpperCase()}`);
+            if (data.role === "producer" && !data.session_token) {
+              console.error("Producer session token missing from login response.");
+              alert("Producer session could not be established. Restart the GLH API and sign in again.");
+              return;
+            }
 
             // saves the session data to local storage
             localStorage.setItem("session_user_id", data.user_id);
@@ -430,6 +435,13 @@ if (authFormObj) {
               localStorage.removeItem("session_producer_token");
             }
 
+            // A producer dashboard requires a stored signed session token.
+            if (data.role === "producer" &&
+                !localStorage.getItem("session_producer_token")) {
+              alert("Unable to save producer session. Check browser storage settings.");
+              return;
+            }
+
             // redirects to the correct portal based on role
             window.location.href = data.redirect_url;
           } else {
@@ -438,7 +450,10 @@ if (authFormObj) {
             document.getElementById("passkey").value = "";
           }
         })
-        .catch((err) => console.error("AUTH ERROR:", err));
+        .catch((err) => {
+          console.error("AUTH ERROR:", err);
+          alert("Unable to complete sign-in. Check the browser Console and API connection.");
+        });
     }
   });
 }

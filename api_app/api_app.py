@@ -146,6 +146,16 @@ class NativeAPIHandler(SimpleHTTPRequestHandler):
         self.wfile.write(body)
 
     def do_GET(self):
+        # Compatibility redirect: older cached navigation used /home.html.
+        # The actual homepage is frontend/index.html.
+        if urlsplit(self.path).path == "/home.html":
+            self.send_response(302)
+            self.send_header("Location", "/index.html")
+            self.send_header("Cache-Control", "no-store")
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+            return
+
         if self.path == "/producer/dashboard":
             connection = None
             try:

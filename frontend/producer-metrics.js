@@ -108,6 +108,7 @@
       renderQueue(data.pending_items);
       setStatus("");
     } catch (error) {
+      console.error("PRODUCER METRICS ERROR:", error);
       setStatus(error.message || "Unable to load producer metrics.");
     } finally {
       inFlight = false;
@@ -115,10 +116,16 @@
   }
 
   window.refreshProducerDashboard = refreshProducerDashboard;
-  document.addEventListener("DOMContentLoaded", function () {
+  function initialiseMetrics() {
     if (!byId("producer-revenue")) return;
     const refresh = byId("producer-refresh");
     if (refresh) refresh.addEventListener("click", refreshProducerDashboard);
     refreshProducerDashboard();
-  });
+  }
+  // Also initialise if this script runs after DOMContentLoaded.
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initialiseMetrics, { once: true });
+  } else {
+    initialiseMetrics();
+  }
 })();
