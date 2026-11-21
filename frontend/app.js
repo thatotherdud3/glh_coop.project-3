@@ -130,6 +130,46 @@ function initShopSearch() {
 
 /* inventory retrieval and distribution */
 
+function showInventoryError(url) {
+  const shopGrid = document.getElementById("shop-inventory-grid");
+  if (shopGrid) {
+    shopGrid.replaceChildren();
+    const section = document.createElement("section");
+    section.className = "shop-inventory-error";
+    section.setAttribute("role", "alert");
+    const title = document.createElement("h2");
+    title.textContent = "Inventory temporarily unavailable.";
+    const info = document.createElement("p");
+    info.textContent = "We could not load the latest produce. Your cart is still saved.";
+    const button = document.createElement("button");
+    button.className = "shop-inventory-retry";
+    button.type = "button";
+    button.textContent = "TRY AGAIN";
+    button.addEventListener("click", () => fetchInventoryData(url));
+    section.append(title, info, button);
+    shopGrid.appendChild(section);
+    const counter = document.getElementById("shop-search-count");
+    if (counter) counter.textContent = "INVENTORY UNAVAILABLE";
+  }
+  if (document.getElementById("producer-ledger-body")) {
+    showSystemFeedback("ledger-feedback",
+      "Unable to load your latest inventory. Refresh the page to try again.", "error");
+  }
+}
+
+function buildAllergenDeclaration(ingredientAllergens, possibleContact = "") {
+  const contains = String(ingredientAllergens || "").trim();
+  const contact = String(possibleContact || "").trim();
+  if (!contains) throw new Error("Declare the allergens used as ingredients or confirm none are used.");
+  if (contains.toLowerCase().startsWith("none of the listed allergens") &&
+      contains.toLowerCase() !== "none of the listed allergens") {
+    throw new Error("The absence declaration cannot be combined with named ingredient allergens.");
+  }
+  const declaration = `Contains: ${contains}${contact ? " | May contain: " + contact : ""}`;
+  if (declaration.length > 500) throw new Error("Keep the allergen declaration within 500 characters.");
+  return declaration;
+}
+
 function fetchInventoryData(url) {
   // appends a timestamp to the URL to prevent the browser from caching the response
   const cacheBustUrl = `${url}?t=${new Date().getTime()}`;
@@ -141,10 +181,13 @@ function fetchInventoryData(url) {
       return response.json();
     })
     .then((data) => {
-      console.log("SYSTEM LOG: Data payload secured.", data);
+      if (!Array.isArray(data)) throw new Error("Unexpected inventory response.");
       distributeData(data);
     })
-    .catch((error) => console.error("SYSTEM ERROR:", error));
+    .catch((error) => {
+      console.error("SYSTEM ERROR:", error);
+      showInventoryError(url);
+    });
 }
 
 function distributeData(inventory) {
@@ -215,7 +258,7 @@ function populateShop(inventory, container) {
     }
 
     // formats the allergen info and price for display
-    let formattedAllergens = `[${escapeHtml(String(item.allergen_info || "").toUpperCase())}]`;
+    let formattedAllergens = `ALLERGEN DECLARATION: ${escapeHtml(String(item.allergen_info || "NOT RECORDED").toUpperCase())}`;
     let formattedPrice = `£${parseFloat(item.price).toFixed(2)}`;
 
     card.innerHTML = `
@@ -374,7 +417,13 @@ function openProductEditor(item) {
   set("edit-product-stock", item.stock_level);
   set("edit-product-description", item.product_description);
   set("edit-product-harvest", item.harvest_date);
-  set("edit-product-allergens", item.allergen_info);
+  const savedAllergens = String(item.allergen_info || "").trim();
+  const portions = savedAllergens.split(/\s*\|\s*May contain:\s*/i);
+  const previousIngredients = portions[0].replace(/^Contains:\s*/i, "").trim();
+  set("edit-product-contains",
+    /^(none|no allergens? present)$/i.test(previousIngredients)
+      ? "None of the listed allergens" : previousIngredients);
+  set("edit-product-may-contain", portions.slice(1).join(" | May contain: "));
   const title = document.getElementById("edit-product-title");
   if (title) title.textContent = "Edit: " + item.product_name;
   showSystemFeedback("product-edit-feedback", "", "info");
@@ -400,13 +449,23 @@ if (productEditForm) {
     if (!Number.isInteger(productId) || productId <= 0) return;
     const saveButton = document.getElementById("edit-product-save");
     if (saveButton.disabled) return;
+    let allergenDeclaration;
+    try {
+      allergenDeclaration = buildAllergenDeclaration(
+        document.getElementById("edit-product-contains").value,
+        document.getElementById("edit-product-may-contain").value
+      );
+    } catch (error) {
+      showSystemFeedback("product-edit-feedback", error.message, "error");
+      return;
+    }
     const payload = {
       product_name: document.getElementById("edit-product-name").value.trim(),
       batch_number: document.getElementById("edit-product-batch").value.trim(),
       price: Number(document.getElementById("edit-product-price").value),
       stock_level: Number(document.getElementById("edit-product-stock").value),
       harvest_date: document.getElementById("edit-product-harvest").value || null,
-      allergen_info: document.getElementById("edit-product-allergens").value.trim(),
+      allergen_info: allergenDeclaration,
       product_description: document.getElementById("edit-product-description").value.trim()
     };
     if (!Number.isInteger(payload.stock_level) || payload.stock_level < 0) {
@@ -445,16 +504,46 @@ if (productEditForm) {
 const ledgerForm = document.getElementById("ledger-form");
 
 if (ledgerForm) {
+  const allergenGrid = document.getElementById("allergen-container");
+  const noAllergens = document.getElementById("no-allergens");
+  allergenGrid?.addEventListener("change", (event) => {
+    if (!event.target.matches(".allergen-check")) return;
+    if (event.target === noAllergens && noAllergens.checked) {
+      allergenGrid.querySelectorAll(".allergen-check:not(#no-allergens)")
+        .forEach(box => { box.checked = false; });
+      document.getElementById("allergen-other").value = "";
+    } else if (event.target !== noAllergens && event.target.checked && noAllergens) {
+      noAllergens.checked = false;
+    }
+  });
+  document.getElementById("allergen-other")?.addEventListener("input", (event) => {
+    if (event.target.value.trim() && noAllergens) noAllergens.checked = false;
+  });
   ledgerForm.addEventListener("submit", async function (event) {
     event.preventDefault();
-    const selected = [...document.querySelectorAll(".allergen-check:checked")];
-    if (!selected.length) {
-      showSystemFeedback("ledger-feedback", "Select all applicable allergens or 'No Allergens Present' before saving.", "error");
+    const selected = [...document.querySelectorAll("#allergen-container .allergen-check:checked")]
+      .filter(cb => cb.id !== "no-allergens");
+    const none = Boolean(document.getElementById("no-allergens")?.checked);
+    const otherAllergens = document.getElementById("allergen-other")?.value.trim() || "";
+    const possibleContact = document.getElementById("allergen-may-contain")?.value.trim() || "";
+    if (!none && !selected.length && !otherAllergens) {
+      showSystemFeedback("ledger-feedback",
+        "Choose the ingredient allergens or confirm that no listed allergens are used.", "error");
       return;
     }
-    const none = selected.some(cb => cb.id === "no-allergens");
-    if (none && selected.length > 1) {
-      showSystemFeedback("ledger-feedback", "'No Allergens Present' cannot be combined with other allergens.", "error");
+    if (none && (selected.length || otherAllergens)) {
+      showSystemFeedback("ledger-feedback",
+        "Clear the absence declaration before adding ingredient allergens.", "error");
+      return;
+    }
+    let declaration;
+    try {
+      const ingredients = none ? "None of the listed allergens" :
+        [...selected.map(cb => cb.parentElement.textContent.trim()), otherAllergens]
+          .filter(Boolean).join(", ");
+      declaration = buildAllergenDeclaration(ingredients, possibleContact);
+    } catch (error) {
+      showSystemFeedback("ledger-feedback", error.message, "error");
       return;
     }
     const button = document.getElementById("commit-btn");
@@ -468,7 +557,7 @@ if (ledgerForm) {
     formData.append("product_description", document.getElementById("input-description")?.value.trim() || "");
     const harvest = document.getElementById("input-harvest-date");
     if (harvest?.value) formData.append("harvest_date", harvest.value);
-    formData.append("allergen_info", selected.map(cb => cb.parentElement.textContent.trim()).join(", "));
+    formData.append("allergen_info", declaration);
     if (imageFile) formData.append("product_image", imageFile);
     button.disabled = true;
     button.textContent = "SAVING PRODUCT…";
@@ -1015,7 +1104,7 @@ async function submitUpdateDetails() {
 
 const CART_DIRECT_DELIVERY_FEE = 15.00;
 let checkoutInFlight = false;
-const CART_CHECKOUT_LABEL = "AUTHORISE TRANSACTION";
+const CART_CHECKOUT_LABEL = "PLACE ORDER";
 
 function formatCartCurrency(value) {
   return Number(value).toLocaleString("en-GB", { style: "currency", currency: "GBP" });
@@ -1070,9 +1159,22 @@ function renderCartPage() {
   if (!container) return;
   container.replaceChildren();
   if (cart.length === 0) {
-    const empty = document.createElement("p");
-    empty.className = "cart-empty-message";
-    empty.textContent = "YOUR CART IS CURRENTLY EMPTY.";
+    const empty = document.createElement("section");
+    empty.className = "cart-empty-state";
+    const kicker = document.createElement("span");
+    kicker.className = "cart-empty-kicker";
+    kicker.textContent = "SOURCING LEDGER";
+    const title = document.createElement("h2");
+    title.className = "cart-empty-title";
+    title.textContent = "Nothing in the basket. Yet.";
+    const copy = document.createElement("p");
+    copy.className = "cart-empty-copy";
+    copy.textContent = "Discover fresh produce from the cooperative and build your first order.";
+    const action = document.createElement("a");
+    action.className = "cart-empty-action";
+    action.href = "products.html";
+    action.textContent = "EXPLORE PRODUCE";
+    empty.append(kicker, title, copy, action);
     container.appendChild(empty);
     updateOrderSummary();
     return;

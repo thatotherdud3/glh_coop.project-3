@@ -211,3 +211,13 @@
 .shop-sort-group select{min-width:190px;max-width:100%;border:1px solid #111;border-radius:0;background:#fff;color:#111;padding:14px 28px 14px 12px;font:13px Helvetica,Arial,sans-serif;cursor:pointer;}
 .shop-sort-group select:focus-visible{outline:2px solid var(--glh-accent);outline-offset:2px;}
 @media(max-width:600px){.shop-sort-group{margin-top:14px;width:100%;justify-content:space-between;}.shop-sort-group label{margin:0;}.shop-sort-group select{flex:1;min-width:0;}}
+
+/* Clear allergen notices and easier product quantity controls. */
+.shop-produce-grid .product-allergen{font:700 12px/1.6 "Courier New",monospace;white-space:normal;overflow-wrap:anywhere;color:#383838}
+.shop-produce-grid .shop-quantity-step{width:44px;min-width:44px;min-height:44px}
+.shop-produce-grid .shop-quantity-controls{height:44px}
+.shop-inventory-error{grid-column:1/-1;padding:75px 5%;display:flex;flex-direction:column;align-items:flex-start;gap:16px;border-bottom:1px solid #111}
+.shop-inventory-error h2{font:400 clamp(32px,5vw,56px)/1.1 Didot,Georgia,serif}
+.shop-inventory-error p{font:400 14px/1.6 Helvetica,Arial,sans-serif;color:#555}
+.shop-inventory-retry{border:0;background:#111;color:#fff;padding:16px 24px;cursor:pointer;font:700 11px Helvetica,Arial,sans-serif;letter-spacing:.1em;min-height:44px}
+.shop-inventory-retry:hover,.shop-inventory-retry:focus-visible{background:var(--glh-accent)}

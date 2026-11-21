@@ -135,34 +135,18 @@
               />
             </div>
 
-            <div class="input-group-split">
-              <div class="input-row">
-                <label class="input-label">Volume/Qty</label>
-                <input
-                  type="number"
-                  class="system-input required-input"
-                  placeholder="0.00"
-                  id="input-stock"
-                  required
-                />
-              </div>
-              <div class="input-row">
-                <label class="input-label">Unit</label>
-                <input
-                  type="text"
-                  class="system-input required-input"
-                  value="lbs"
-                  required
-                />
-              </div>
+            <div class="input-row">
+              <label class="input-label" for="input-stock">QUANTITY IN UNITS</label>
+              <input type="number" class="system-input required-input"
+                placeholder="0" id="input-stock" min="0" step="1" required />
             </div>
 
             <div class="input-row" style="margin-bottom: 60px">
-              <label class="input-label">VISUAL ASSET (PNG/JPG)</label>
+              <label class="input-label" for="input-image">PRODUCT PHOTOGRAPH (PNG, JPG OR WEBP)</label>
               <input
                 type="file"
                 id="input-image"
-                accept="image/*"
+                accept="image/png,image/jpeg,image/webp"
                 style="
                   font-family: &quot;Courier New&quot;, Courier, monospace;
                   font-size: 12px;
@@ -184,10 +168,10 @@
 
         <div class="manifest-panel allergen-panel">
           <span class="system-label text-red">Mandatory Declaration</span>
-          <h2 class="panel-title">Allergen Profile.</h2>
+          <h2 class="panel-title">Allergen Declaration.</h2>
           <p class="panel-disclaimer">
-            EU Regulation 1169/2011 mandates the declaration of specific
-            allergens. Tick all that apply to this batch.
+            DECLARE ALL APPLICABLE ALLERGENS USED AS INGREDIENTS.
+            RECORD POSSIBLE CROSS CONTACT SEPARATELY AND ONLY WHEN VERIFIED.
           </p>
 
           <div class="allergen-grid" id="allergen-container">
@@ -280,16 +264,20 @@
                 type="checkbox"
                 class="allergen-check"
                 id="no-allergens"
-              /><span class="custom-box"></span>No Allergens Present</label
+              /><span class="custom-box"></span>No Listed Allergens Used As Ingredients</label
             >
-            <label class="allergen-checkbox" style="grid-column: span 2">
-              <input type="checkbox" class="allergen-check" id="other" />
-              <span class="custom-box"></span>
-              <span class="label-text"
-                >Other Allergens / May Contain (e.g., Buckwheat, Pine nuts, or
-                cross-contamination risks):</span
-              >
-            </label>
+          </div>
+          <div class="allergen-declaration-details">
+            <label for="allergen-other">ADDITIONAL CONFIRMED ALLERGENS</label>
+            <textarea id="allergen-other" class="system-input" maxlength="250"
+              rows="2" placeholder="Enter any additional verified ingredient allergens"></textarea>
+            <label for="allergen-may-contain">POSSIBLE CROSS CONTACT</label>
+            <textarea id="allergen-may-contain" class="system-input" maxlength="250"
+              rows="2" placeholder="Only add a warning when a real risk has been assessed"></textarea>
+            <p id="allergen-guidance">
+              SELECT THE RELEVANT INGREDIENT ALLERGENS OR CONFIRM NONE ARE USED.
+              POSSIBLE CROSS CONTACT IS RECORDED AS A SEPARATE WARNING.
+            </p>
           </div>
         </div>
       </form>
@@ -320,10 +308,16 @@
             <label class="ledger-edit-wide">DESCRIPTION (OPTIONAL)
               <textarea class="system-input" id="edit-product-description" rows="3" maxlength="1500"></textarea>
             </label>
-            <label class="ledger-edit-wide">ALLERGEN DECLARATION
-              <textarea class="system-input" id="edit-product-allergens" rows="2" maxlength="500" required
-                aria-describedby="edit-allergen-guidance"></textarea>
-              <span class="ledger-edit-help" id="edit-allergen-guidance">Enter all applicable regulated allergens, or 'No Allergens Present' only if verified. Do not invent cross-contact warnings.</span>
+            <label class="ledger-edit-wide">ALLERGENS USED AS INGREDIENTS
+              <input class="system-input" id="edit-product-contains" type="text" maxlength="400" required
+                aria-describedby="edit-allergen-guidance"
+                placeholder="Milk, Eggs or None of the listed allergens" />
+              <span class="ledger-edit-help" id="edit-allergen-guidance">LIST ALL APPLICABLE INGREDIENT ALLERGENS OR CONFIRM NONE ARE USED.</span>
+            </label>
+            <label class="ledger-edit-wide">POSSIBLE CROSS CONTACT
+              <textarea class="system-input" id="edit-product-may-contain" rows="2" maxlength="250"
+                placeholder="Only enter a verified risk"></textarea>
+              <span class="ledger-edit-help">POSSIBLE CONTACT MUST BE BASED ON A REAL ASSESSMENT.</span>
             </label>
           </div>
           <p id="product-edit-feedback" class="glh-inline-notice" role="status" aria-live="polite" hidden></p>

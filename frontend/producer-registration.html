@@ -3,153 +3,48 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>GLH | Terminal Registration</title>
+    <title>GLH | Producer Access</title>
     <link rel="stylesheet" href="style1.css" />
   </head>
   <body>
     <input type="checkbox" id="menu-toggle" class="menu-checkbox" />
-
     <nav class="global-nav">
-      <div class="nav-left">
-        <label for="menu-toggle" class="nav-icon" aria-label="menu">
-          <div class="line-1"></div>
-          <div class="line-2"></div>
-          <div class="line-3"></div>
-        </label>
-      </div>
-      <div class="logo">
-        <a href="index.html">G L H // CO-OP</a>
-      </div>
-      <div class="nav-right">
-        <a href="cart.html" class="nav-item">CART [0]</a>
-      </div>
+      <div class="nav-left"><label for="menu-toggle" class="nav-icon" aria-label="Menu">
+        <div class="line-1"></div><div class="line-2"></div><div class="line-3"></div>
+      </label></div>
+      <div class="logo"><a href="index.html">G L H // CO-OP</a></div>
+      <div class="nav-right"><a href="cart.html" class="nav-item">CART [0]</a></div>
     </nav>
-    <aside class="system-menu" id="system-menu">
+    <aside class="system-menu">
       <div class="menu-matrix">
-        <span
-          class="system-label text-sage"
-          style="display: block; margin-bottom: 60px"
-          >System Wayfinding</span
-        >
+        <span class="system-label text-sage">SYSTEM WAYFINDING</span>
         <nav class="menu-nav">
           <a href="index.html" class="menu-link">Home</a>
           <a href="products.html" class="menu-link">Shop</a>
-          <a href="farmers.html" class="menu-link">Our Farmers</a>
+          <a href="producer-login.html" class="menu-link">Producer Node</a>
           <a href="customer-login.html" class="menu-link">Customer Node</a>
-          <a href="batch-trace.html" class="menu-link">Batch Trace</a>
-          <a href="drop-nodes.html" class="menu-link">Delivery/<br />Collection</a>
-          <a href="kitchen-hub.html" class="menu-link">Kitchen Hub</a>
-          <a href="plant-knowledge.html" class="menu-link">Plant Knowledge</a>
         </nav>
       </div>
     </aside>
-
-    <label for="menu-toggle" class="menu-shield" id="menu-shield"></label>
-
+    <label for="menu-toggle" class="menu-shield"></label>
     <main class="auth-terminal">
       <section class="auth-panel context-panel">
-        <span class="auth-label">SYSTEM REGISTRATION</span>
-        <h1 class="auth-title">Terminal<br />Creation.</h1>
-        <p class="auth-disclaimer">
-          REGISTER A NEW ENTITY PROFILE TO ACCESS THE SECURE NETWORK. APPROVAL
-          IS SUBJECT TO NETWORK VERIFICATION AND REVIEW BY THE BOARD OF
-          DIRECTORS.
-        </p>
+        <span class="auth-label">PRODUCER ACCESS</span>
+        <h1 class="auth-title">Access<br />Control.</h1>
+        <p class="auth-disclaimer">PRODUCER ACCOUNTS ARE MANAGED BY THE COOPERATIVE.</p>
       </section>
-
       <section class="auth-panel form-panel">
-        <form class="auth-form" action="#" method="POST">
-          <div class="input-group">
-            <label for="entity-name" class="auth-label"
-              >ENTITY NAME / PRODUCER TITLE</label
-            >
-            <input
-              type="text"
-              id="entity-name"
-              class="auth-input"
-              placeholder="ENTER ALIAS"
-              required
-              autocomplete="off"
-            />
-          </div>
-
-          <div class="input-group">
-            <label for="producer-email" class="auth-label"
-              >OPERATOR EMAIL</label
-            >
-            <input
-              type="email"
-              id="producer-email"
-              class="auth-input"
-              placeholder="opp@domain.com"
-              required
-              autocomplete="off"
-            />
-          </div>
-
-          <div class="input-group">
-            <label for="req-id" class="auth-label">REQUESTED ID CODE</label>
-            <input
-              type="text"
-              id="req-id"
-              class="auth-input"
-              placeholder="ENTER ID"
-              required
-              autocomplete="off"
-            />
-          </div>
-
-          <div class="input-group">
-            <label for="passkey" class="auth-label">NEW PASSKEY</label>
-            <input
-              type="password"
-              id="passkey"
-              class="auth-input"
-              placeholder="• • • • • • • •"
-              required
-            />
-          </div>
-
-          <div class="input-group">
-            <label for="passkey-confirm" class="auth-label"
-              >CONFIRM PASSKEY</label
-            >
-            <input
-              type="password"
-              id="passkey-confirm"
-              class="auth-input"
-              placeholder="• • • • • • • •"
-              required
-            />
-          </div>
-
-          <button type="submit" class="auth-submit">SUBMIT REGISTRATION</button>
-
-          <div class="auth-footer-status">
-            <span class="auth-mode" style="margin-bottom: 24px; display: block"
-              >MODE: PRODUCER LEVEL</span
-            >
-            <a
-              href="producer-login.html"
-              class="auth-label"
-              style="
-                text-decoration: none;
-                border-bottom: 1px solid #111111;
-                padding-bottom: 4px;
-              "
-              >EXISTING ACCOUNT? AUTHENTICATE HERE</a
-            >
-          </div>
-        </form>
+        <span class="auth-label">REGISTRATION CLOSED</span>
+        <h2 class="panel-title">Already part of the network?</h2>
+        <p class="producer-access-note">PUBLIC PRODUCER REGISTRATION IS NOT AVAILABLE.
+          USE YOUR EXISTING CREDENTIALS TO ENTER THE TERMINAL.</p>
+        <a href="producer-login.html" class="system-btn">OPEN PRODUCER LOGIN</a>
       </section>
     </main>
-
     <footer class="massive-footer">
-      <div class="footer-content">
-        <h2>TRACEABLE.<br />LOCAL.<br />VERIFIED.</h2>
-      </div>
+      <div class="footer-content"><h2>TRACEABLE.<br />LOCAL.<br />VERIFIED.</h2></div>
       <p class="site-copyright">© 2026 THATOTHERCOMPANY. ALL RIGHTS RESERVED.</p>
     </footer>
-    <script src="app.js?v=2"></script>.
+    <script src="app.js"></script>
   </body>
 </html>
