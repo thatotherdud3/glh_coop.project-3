@@ -118,7 +118,8 @@ class SecurityWorkflowTests(unittest.TestCase):
             return conn.execute(sql, args).fetchone()
 
     def send(self, method, path, payload=None, session_role=None, user_id=1,
-             origin=None, raw_body=None, content_type="application/json"):
+             origin=None, raw_body=None, content_type="application/json",
+             cookie_header=None):
         url = f"http://127.0.0.1:{self.port}{path}"
         headers = {}
         body = raw_body
@@ -129,6 +130,8 @@ class SecurityWorkflowTests(unittest.TestCase):
         if session_role:
             name = "glh_customer_session" if session_role == "customer" else "glh_producer_session"
             headers["Cookie"] = name + "=" + issue_producer_token(user_id)
+        if cookie_header:
+            headers["Cookie"] = cookie_header
         if origin:
             headers["Origin"] = origin
         request = Request(url, data=body, headers=headers, method=method)
@@ -206,15 +209,141 @@ class SecurityWorkflowTests(unittest.TestCase):
         self.assertEqual(code, 200)
         self.assertEqual(orders, [])
 
-    def test_checkout_requires_customer_and_rejects_duplicate_items(self):
+    def test_customer_login_cookie_can_checkout_and_read_own_orders(self):
+        """Customer-node sign-in must authorise the same user's order ledger."""
+        status, login, headers = self.send("POST", "/login", payload={
+            "email": "customer@glh.test", "password": "secure123",
+            "requested_node": "customer",
+        })
+        self.assertEqual(status, 200, login)
+        self.assertEqual(login["role"], "customer")
+        cookie = next(
+            value.split(";", 1)[0]
+            for value in headers.get_all("Set-Cookie", [])
+            if value.startswith("glh_customer_session=")
+        )
+        session_status, user, _ = self.send("GET", "/session", cookie_header=cookie)
+        self.assertEqual(session_status, 200, user)
+        self.assertEqual((user["user_id"], user["role"]), (1, "customer"))
+        self.assertEqual(self.send("GET", "/orders/1", cookie_header=cookie)[0], 200)
+        self.assertEqual(self.send("GET", "/orders/4", cookie_header=cookie)[0], 403)
+        self.assertEqual(
+            self.send("GET", "/producer/dashboard", cookie_header=cookie)[0], 401
+        )
+        checkout_status, order, _ = self.send("POST", "/checkout", payload={
+            "delivery_method": "hub",
+            "collection_node_code": "ND-01",
+            "total_price": 6,
+            "cart": [{"product_id": 11, "quantity": 2}],
+            "checkout_key": "customer-login-flow-0001",
+        }, cookie_header=cookie)
+        self.assertEqual(checkout_status, 201, order)
+        status, history, _ = self.send("GET", "/orders/1", cookie_header=cookie)
+        self.assertEqual(status, 200, history)
+        self.assertEqual(len(history), 1)
+        self.assertEqual(history[0]["order_id"], order["order_id"])
+        self.assertEqual(
+            self.send(
+                "GET", f"/orders/{order['order_id']}/confirmation",
+                cookie_header=cookie
+            )[0], 200
+        )
+
+    def test_producer_login_can_switch_nodes_and_complete_checkout(self):
+        """The exact same cookie works at both producer and customer nodes."""
+        payload = {
+            "delivery_method": "hub", "collection_node_code": "ND-01",
+            "total_price": 6,
+            "checkout_key": "producer-customer-node-001",
+            "cart": [{"product_id": 11, "quantity": 2}],
+        }
+        for requested_node in ("producer", "customer"):
+            # Exercise a real HTTP login, not only a synthesised test token.
+            status, login, headers = self.send("POST", "/login", payload={
+                "email": "producer-a@glh.test",
+                "password": "secure123",
+                "requested_node": requested_node,
+            })
+            self.assertEqual(status, 200, login)
+            self.assertEqual(login["role"], "producer")
+            self.assertEqual(
+                login["redirect_url"],
+                "producer-portal.html" if requested_node == "producer" else "customer-portal.html"
+            )
+            issued = headers.get_all("Set-Cookie", [])
+            cookie = next(
+                value.split(";", 1)[0]
+                for value in issued
+                if value.startswith("glh_producer_session=")
+            )
+            session_status, session, _ = self.send(
+                "GET", "/session", cookie_header=cookie
+            )
+            self.assertEqual(session_status, 200, session)
+            self.assertEqual((session["user_id"], session["role"]), (2, "producer"))
+
+            # Producers retain their dashboard access while shopping.
+            self.assertEqual(
+                self.send("GET", "/producer/dashboard", cookie_header=cookie)[0], 200
+            )
+            self.assertEqual(
+                self.send("GET", "/orders/2", cookie_header=cookie)[0], 200
+            )
+            self.assertEqual(
+                self.send("GET", "/orders/1", cookie_header=cookie)[0], 403
+            )
+            self.assertEqual(
+                self.send("GET", "/orders/3", cookie_header=cookie)[0], 403
+            )
+
+            # Both entry points share an identity and must not bypass ownership.
+            result_status, created, _ = self.send(
+                "POST", "/checkout", payload={
+                    **payload, "checkout_key": "producer-shopping-" + requested_node
+                }, cookie_header=cookie
+            )
+            self.assertEqual(result_status, 201, created)
+            self.assertEqual(
+                self.query(
+                    "SELECT customer_id FROM orders WHERE order_id = ?",
+                    (created["order_id"],)
+                )[0], 2
+            )
+            history_status, history, _ = self.send(
+                "GET", "/orders/2", cookie_header=cookie
+            )
+            self.assertEqual(history_status, 200, history)
+            self.assertTrue(any(row["order_id"] == created["order_id"] for row in history))
+            self.assertEqual(
+                self.send(
+                    "GET", f"/orders/{created['order_id']}/confirmation",
+                    cookie_header=cookie
+                )[0], 200
+            )
+            self.assertEqual(
+                self.send("GET", "/producer/dashboard", cookie_header=cookie)[0], 200
+            )
+
+    def test_customer_sessions_never_gain_producer_dashboard_access(self):
+        self.assertEqual(
+            self.send("GET", "/producer/dashboard", session_role="customer", user_id=1)[0],
+            401
+        )
+        self.assertEqual(
+            self.send("GET", "/orders/2", session_role="customer", user_id=1)[0],
+            403
+        )
+
+    def test_checkout_requires_signed_member_and_rejects_duplicate_items(self):
         payload = {
             "customer_id": 4, "delivery_method": "hub",
             "collection_node_code": "ND-01", "total_price": 6,
             "cart": [{"product_id": 11, "quantity": 2}],
         }
         self.assertEqual(self.send("POST", "/checkout", payload=payload)[0], 401)
+        # A producer account is also a valid shopping member.
         self.assertEqual(
-            self.send("POST", "/checkout", payload=payload, session_role="producer", user_id=2)[0], 401
+            self.send("POST", "/checkout", payload=payload, session_role="producer", user_id=2)[0], 201
         )
         duplicate = {**payload, "cart": [
             {"product_id": 11, "quantity": 2},

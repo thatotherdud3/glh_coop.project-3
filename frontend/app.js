@@ -1374,7 +1374,9 @@ async function initiateCheckout() {
         error.message || "Stock or pricing changed. Review your cart and try again.", "error");
     } else {
       showSystemFeedback("cart-feedback",
-        error.status === 401 ? "Your customer session has expired. Sign in again to place this order." :
+        error.status === 401
+          ? "Checkout authentication was rejected by the API. Sign in again; if your portal still shows you signed in, restart the updated Python server. Your cart is saved."
+          :
         error.status ? error.message :
         "The connection was interrupted. We cannot confirm whether the order was recorded. Retry with the same cart; duplicate submissions are protected.",
         "error");
@@ -1406,7 +1408,11 @@ function loadOrderHistory(authenticatedCustomerId) {
   // fetches all orders for the logged in customer from the API
   fetch(`/orders/${userId}`, { credentials: "same-origin", cache: "no-store" })
     .then((res) => {
-      if (!res.ok) throw new Error("Order history request was rejected (" + res.status + ").");
+      if (!res.ok) {
+        const error = new Error("Order history request was rejected (" + res.status + ").");
+        error.status = res.status;
+        throw error;
+      }
       return res.json();
     })
     .then((orders) => {
@@ -1438,8 +1444,18 @@ function loadOrderHistory(authenticatedCustomerId) {
     })
     .catch((err) => {
       console.error("ORDER HISTORY ERROR:", err);
-      tbody.innerHTML =
-        "<tr><td colspan='5' style=\"font-family:'Courier New',monospace;font-size:12px;padding:24px;color:#c00;\">SYSTEM ERROR: Could not load order manifest.</td></tr>";
+      const message = err.status === 403
+        ? "SIGNED IN, BUT THE API DENIED ACCESS TO THIS ORDER HISTORY. RESTART THE UPDATED API AND SIGN IN AGAIN."
+        : err.status === 401
+          ? "YOUR ORDER SESSION HAS EXPIRED. SIGN IN AGAIN."
+          : "SYSTEM ERROR: Could not load order manifest. " + (err.status ? "HTTP " + err.status : "Check the API server.");
+      const row = document.createElement("tr");
+      const cell = document.createElement("td");
+      cell.colSpan = 5;
+      cell.style.cssText = "font:12px/1.6 'Courier New',monospace;padding:24px;color:#a22;";
+      cell.textContent = message;
+      row.appendChild(cell);
+      tbody.replaceChildren(row);
     });
 }
 
