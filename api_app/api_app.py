@@ -10,6 +10,7 @@ from email.parser import BytesParser
 from producer_metrics import (
     ensure_producer_metrics_schema, fulfil_order_item,
     get_producer_dashboard, issue_producer_token, producer_from_request,
+    customer_from_request,
 )
 
 PORT = 8000
@@ -134,6 +135,10 @@ class NativeAPIHandler(SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         # tells the server to serve files from the frontend folder
         super().__init__(*args, directory=FRONTEND_DIR, **kwargs)
+
+    def _origin_allowed(self):
+        origin = self.headers.get('Origin')
+        return not origin or origin == 'http://' + self.headers.get('Host', '')
 
     def do_OPTIONS(self):
         # handles the CORS pre-flight request so the browser allows cross-origin calls
@@ -316,16 +321,16 @@ class NativeAPIHandler(SimpleHTTPRequestHandler):
             super().do_GET()
 
     def do_POST(self):
+        if not self._origin_allowed():
+            self.send_json_result(403, {"message": "Cross-site requests are not permitted."})
+            return
 
         if self.path == "/producer/logout":
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
             self.send_header("Cache-Control", "no-store")
-            self.send_header(
-                "Set-Cookie",
-                "glh_producer_session=; Path=/; Max-Age=0; "
-                "HttpOnly; SameSite=Strict"
-            )
+            for cookie_name in ("glh_producer_session", "glh_customer_session"):
+                self.send_header("Set-Cookie", cookie_name + "=; Path=/; Max-Age=0; HttpOnly; SameSite=Strict")
             body = b'{"status":"success"}'
             self.send_header("Content-Length", str(len(body)))
             self.end_headers()
@@ -343,7 +348,10 @@ class NativeAPIHandler(SimpleHTTPRequestHandler):
                 full_name = payload.get("full_name")
                 email = payload.get("email")
                 raw_password = payload.get("password")
-                role = payload.get("role", "customer")
+                if payload.get("role", "customer") != "customer":
+                    self.send_json_result(403, {"message": "Only customer accounts can be registered publicly."})
+                    return
+                role = "customer"
 
                 # converts the password into a SHA256 hash before storing it
                 hashed_pw = hashlib.sha256(raw_password.encode('utf-8')).hexdigest()
@@ -408,7 +416,7 @@ class NativeAPIHandler(SimpleHTTPRequestHandler):
                     role = user["role"]
 
                     # blocks a customer account from accessing the producer terminal
-                    if requested_node == "producer" and role == "customer":
+                    if requested_node != role:
                         print(f"SECURITY ALERT: Hard bounce. Customer identity [{email}] attempted access via Producer Terminal.")
                         self.send_response(403)
                         self.send_header('Access-Control-Allow-Origin', '*')
@@ -424,27 +432,27 @@ class NativeAPIHandler(SimpleHTTPRequestHandler):
                         target_node = "producer-portal.html" if role == "producer" else "customer-portal.html"
 
                     print(f"SECURITY LOG: Authentication successful for [{email}]. Node assignment: {role.upper()}.")
-                    session_token = (
-                        issue_producer_token(user["user_id"])
-                        if role == "producer" else None
-                    )
+                    session_token = issue_producer_token(user["user_id"])
                     self.send_response(200)
                     self.send_header('Access-Control-Allow-Origin', '*')
                     self.send_header('Content-type', 'application/json')
-                    if session_token:
-                        # HttpOnly: metrics authentication no longer depends on
-                        # the browser persisting a localStorage token.
-                        self.send_header(
-                            "Set-Cookie",
-                            "glh_producer_session=" + session_token
-                            + "; Path=/; Max-Age=86400; HttpOnly; SameSite=Strict"
-                        )
-                    else:
-                        self.send_header(
-                            "Set-Cookie",
-                            "glh_producer_session=; Path=/; Max-Age=0; "
-                            "HttpOnly; SameSite=Strict"
-                        )
+                    session_cookie = (
+                        "glh_producer_session" if role == "producer"
+                        else "glh_customer_session"
+                    )
+                    other_cookie = (
+                        "glh_customer_session" if role == "producer"
+                        else "glh_producer_session"
+                    )
+                    self.send_header(
+                        "Set-Cookie",
+                        session_cookie + "=" + session_token
+                        + "; Path=/; Max-Age=86400; HttpOnly; SameSite=Strict"
+                    )
+                    self.send_header(
+                        "Set-Cookie",
+                        other_cookie + "=; Path=/; Max-Age=0; HttpOnly; SameSite=Strict"
+                    )
                     self.end_headers()
                     self.wfile.write(json.dumps({
                         "status": "success",
@@ -452,7 +460,7 @@ class NativeAPIHandler(SimpleHTTPRequestHandler):
                         "user_id": user["user_id"],
                         "full_name": user["full_name"],
                         "redirect_url": target_node,
-                        "session_token": session_token
+                        "session_token": None
                     }).encode('utf-8'))
                 else:
                     # if the SQL statement returned nothing the credentials were wrong
@@ -542,7 +550,10 @@ class NativeAPIHandler(SimpleHTTPRequestHandler):
                 content_length = int(self.headers.get('Content-Length', 0))
                 payload = json.loads(self.rfile.read(content_length).decode('utf-8'))
 
-                customer_id = payload.get("customer_id")
+                customer_id = customer_from_request(connection, self.headers)
+                if customer_id is None:
+                    self.send_json_result(401, {"message": "Sign in as a customer to place an order."})
+                    return
                 cart_items = payload.get("cart", [])
                 submitted_total = payload.get("total_price", 0.0)
                 delivery_method = payload.get("delivery_method", "hub")
@@ -738,6 +749,9 @@ class NativeAPIHandler(SimpleHTTPRequestHandler):
             self.end_headers()
 
     def do_PUT(self):
+        if not self._origin_allowed():
+            self.send_json_result(403, {"message": "Cross-site requests are not permitted."})
+            return
         if self.path.startswith("/producer/fulfil/"):
             connection = None
             try:
@@ -821,6 +835,9 @@ class NativeAPIHandler(SimpleHTTPRequestHandler):
             self.end_headers()
 
     def do_DELETE(self):
+        if not self._origin_allowed():
+            self.send_json_result(403, {"message": "Cross-site requests are not permitted."})
+            return
         if self.path.startswith('/products/'):
             try:
                 # pulls the product id out of the URL
