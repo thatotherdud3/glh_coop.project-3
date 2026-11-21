@@ -142,6 +142,12 @@ class NativeAPIHandler(SimpleHTTPRequestHandler):
         origin = self.headers.get('Origin')
         return not origin or origin == 'http://' + self.headers.get('Host', '')
 
+    def authenticated_user(self, connection):
+        return (
+            producer_from_request(connection, self.headers)
+            or customer_from_request(connection, self.headers)
+        )
+
     def do_OPTIONS(self):
         # handles the CORS pre-flight request so the browser allows cross-origin calls
         self.send_response(200)
@@ -264,7 +270,11 @@ class NativeAPIHandler(SimpleHTTPRequestHandler):
                 connection = get_db_connection()
                 cursor = connection.cursor()
 
-                # SQL select to fetch a single users public profile
+                # Profiles are private; clients may access only their own account.
+                if self.authenticated_user(connection) != user_id:
+                    connection.close()
+                    self.send_json_result(403, {"message": "Not authorised to view this account."})
+                    return
                 cursor.execute("SELECT user_id, full_name, email, role FROM users WHERE user_id = ?", (user_id,))
                 user = cursor.fetchone()
                 connection.close()
@@ -289,7 +299,11 @@ class NativeAPIHandler(SimpleHTTPRequestHandler):
                 connection = get_db_connection()
                 cursor = connection.cursor()
 
-                # joins orders to order_items to get the item count per order, newest first
+                # A customer can only view their own order history.
+                if customer_from_request(connection, self.headers) != customer_id:
+                    connection.close()
+                    self.send_json_result(403, {"message": "Not authorised to view these orders."})
+                    return
                 cursor.execute("""
                     SELECT o.order_id, o.order_time, o.total_price,
                            COUNT(oi.item_id) as item_count,
@@ -838,6 +852,10 @@ class NativeAPIHandler(SimpleHTTPRequestHandler):
 
                 connection = get_db_connection()
                 cursor = connection.cursor()
+                if self.authenticated_user(connection) != user_id:
+                    connection.close()
+                    self.send_json_result(403, {"message": "Not authorised to update this account."})
+                    return
 
                 if raw_password:
                     # converts the new password into a hash before updating the record
@@ -914,6 +932,20 @@ class NativeAPIHandler(SimpleHTTPRequestHandler):
                 user_id = int(self.path.split('/')[-1])
                 connection = get_db_connection()
                 cursor = connection.cursor()
+                if self.authenticated_user(connection) != user_id:
+                    connection.close()
+                    self.send_json_result(403, {"message": "Not authorised to delete this account."})
+                    return
+                # Prevent orphaned order history; accounts with orders need review.
+                owns_orders = connection.execute(
+                    "SELECT 1 FROM orders WHERE customer_id = ? LIMIT 1", (user_id,)
+                ).fetchone()
+                if owns_orders:
+                    connection.close()
+                    self.send_json_result(409, {
+                        "message": "Accounts with order history cannot be deleted through this demo."
+                    })
+                    return
                 # deletes the producers products first to satisfy the foreign key constraint
                 cursor.execute("DELETE FROM products WHERE producer_id = ?", (user_id,))
                 # then removes the user account itself
