@@ -4,9 +4,10 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>GLH | Active Cart</title>
-    <link rel="stylesheet" href="style1.css" />
+    <link rel="stylesheet" href="style1.css?v=glh-cart-20261121" />
+    <link rel="stylesheet" href="cart-design.css?v=glh-cart-20261121" />
   </head>
-  <body>
+  <body class="cart-page">
     <input type="checkbox" id="menu-toggle" class="menu-checkbox" />
 
     <nav class="global-nav">
@@ -49,62 +50,48 @@
     <label for="menu-toggle" class="menu-shield" id="menu-shield"></label>
 
     <main class="cart-container">
-      <header class="cart-header">
-        <h1 class="cart-title">ACTIVE CART</h1>
-      </header>
-
+      <h1 class="cart-visually-hidden">Active cart</h1>
       <div class="cart-grid">
-        <section class="cart-items">
-        </section>
-
-        <aside class="order-summary">
-          <h2 class="summary-heading">ORDER SUMMARY</h2>
-
-          <div class="delivery-options">
+        <div class="cart-lines">
+          <section class="cart-items" aria-label="Products in your cart"></section>
+          <a class="cart-continue-link" href="products.html">← CONTINUE SOURCING</a>
+        </div>
+        <aside class="order-summary" aria-label="Order summary">
+          <span class="cart-summary-kicker">LEDGER SUMMARY</span>
+          <h2 class="summary-heading">LOGISTICS ROUTING</h2>
+          <fieldset class="delivery-options">
+            <legend class="cart-visually-hidden">Choose collection or delivery</legend>
             <label class="delivery-toggle">
-              <input
-                type="radio"
-                name="delivery-method"
-                value="hub"
-                class="allergen-check"
-                checked
-              />
-              HUB COLLECTION
+              <input type="radio" name="delivery-method" value="hub" class="cart-delivery-radio" checked />
+              <span class="delivery-description">
+                <span class="delivery-title">HUB COLLECTION</span>
+                <span class="delivery-detail">PICK UP AT LOCAL NODE.</span>
+                <span class="delivery-cost">COST: £0.00</span>
+              </span>
             </label>
-
             <label class="delivery-toggle">
-              <input
-                type="radio"
-                name="delivery-method"
-                value="direct"
-                class="allergen-check"
-              />
-              DIRECT DELIVERY
+              <input type="radio" name="delivery-method" value="direct" class="cart-delivery-radio" />
+              <span class="delivery-description">
+                <span class="delivery-title">DIRECT DELIVERY</span>
+                <span class="delivery-detail">ROUTED TO YOUR ADDRESS.</span>
+                <span class="delivery-cost">COST: £15.00</span>
+              </span>
             </label>
-          </div>
-
+          </fieldset>
           <table class="summary-totals">
             <tbody>
-              <tr>
-                <td>SUBTOTAL</td>
-                <td class="numeric">£ 0.00</td>
-              </tr>
-              <tr>
-                <td>VAT</td>
-                <td class="numeric">£ 0.00</td>
-              </tr>
-              <tr>
-                <td>DELIVERY</td>
-                <td class="numeric">£ 0.00</td>
-              </tr>
-              <tr class="grand-total">
-                <td>TOTAL</td>
-                <td class="numeric">£ 0.00</td>
-              </tr>
+              <tr><th scope="row">SUBTOTAL</th><td class="numeric">£0.00</td></tr>
+              <tr><th scope="row">DELIVERY</th><td class="numeric">£0.00</td></tr>
+              <tr><th scope="row">VAT</th><td class="numeric">£0.00</td></tr>
             </tbody>
           </table>
-
-          <button type="submit" class="cart-submit">SUBMIT ORDER</button>
+          <div class="cart-ledger-total">
+            <span>FINAL LEDGER</span>
+            <strong class="cart-ledger-amount">£0.00</strong>
+          </div>
+          <p class="cart-stock-message" role="alert" hidden>Some items exceed available stock. Update your quantities before checkout.</p>
+          <button type="button" class="cart-submit">AUTHORISE TRANSACTION</button>
+          <p class="cart-security-note">SECURE TERMINAL. FULFILMENT VIA LOCAL CO-OP NETWORK.</p>
         </aside>
       </div>
     </main>
@@ -114,6 +101,6 @@
         <h2>TRACEABLE.<br />LOCAL.<br />VERIFIED.</h2>
       </div>
     </footer>
-    <script src="app.js"></script>
+    <script src="app.js?v=glh-cart-20261121"></script>
   </body>
 </html>
