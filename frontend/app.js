@@ -93,10 +93,22 @@ function renderShopSearch() {
   if (!grid) return;
   const input = document.getElementById("shop-search");
   const query = (input?.value || "").trim().toLocaleLowerCase("en-GB");
+  const sortMode = document.getElementById("shop-sort")?.value || "name-asc";
+  const byName = (a, b) => String(a.product_name || "").localeCompare(
+    String(b.product_name || ""), "en-GB", { sensitivity: "base", numeric: true }
+  ) || Number(a.product_id) - Number(b.product_id);
+  const stockRank = (item) => Number(item.stock_level) <= 0 ? 2 :
+    Number(item.stock_level) <= 20 ? 1 : 0;
   const results = shopInventory.filter((item) =>
     [item.product_name, item.producer_name, item.batch_number, item.product_description]
       .some((value) => String(value || "").toLocaleLowerCase("en-GB").includes(query))
-  );
+  ).sort((a, b) => {
+    if (sortMode === "name-desc") return -byName(a, b);
+    if (sortMode === "price-asc") return Number(a.price) - Number(b.price) || byName(a, b);
+    if (sortMode === "price-desc") return Number(b.price) - Number(a.price) || byName(a, b);
+    if (sortMode === "availability") return stockRank(a) - stockRank(b) || byName(a, b);
+    return byName(a, b);
+  });
   populateShop(results, grid);
   if (!results.length) {
     const empty = document.createElement("p");
@@ -113,6 +125,7 @@ function renderShopSearch() {
 function initShopSearch() {
   const input = document.getElementById("shop-search");
   if (input) input.addEventListener("input", renderShopSearch);
+  document.getElementById("shop-sort")?.addEventListener("change", renderShopSearch);
 }
 
 /* inventory retrieval and distribution */
@@ -177,16 +190,8 @@ function resolveProductImageUrl(imageName) {
 function populateShop(inventory, container) {
   container.innerHTML = "";
 
-  // Alphabetical by the product's name, not by producer or batch.
-  const sortedInventory = [...inventory].sort((a, b) =>
-    String(a.product_name || "").localeCompare(
-      String(b.product_name || ""),
-      "en-GB",
-      { sensitivity: "base", numeric: true },
-    ) || Number(a.product_id) - Number(b.product_id)
-  );
-
-  sortedInventory.forEach((item) => {
+  // Shop search and sorting provide the display order.
+  inventory.forEach((item) => {
     const card = document.createElement("div");
     card.className = "product-card";
 
@@ -352,7 +357,7 @@ function populateLedger(inventory, container) {
         </div>
       </td>`;
     row.querySelector(".ledger-edit-btn").addEventListener("click", () => openProductEditor(item));
-    row.querySelector(".ledger-remove-btn").addEventListener("click", () => deleteProduct(item.product_id));
+    row.querySelector(".ledger-remove-btn").addEventListener("click", () => deleteProduct(item.product_id, item.product_name));
     container.appendChild(row);
   });
 }
@@ -418,7 +423,10 @@ if (productEditForm) {
         body: JSON.stringify(payload)
       }).then(readApiResponse);
       closeProductEditor();
-      showSystemFeedback("ledger-feedback", result.message || "Changes saved to your product listing.", "success");
+      showSystemFeedback("ledger-feedback",
+        `Changes saved to “${payload.product_name}”. Stock: ${payload.stock_level} units · Unit price: £${payload.price.toFixed(2)}.`,
+        "success");
+      document.getElementById("ledger-feedback")?.scrollIntoView({ behavior: "smooth", block: "nearest" });
       fetchInventoryData("/products");
       if (typeof window.refreshProducerDashboard === "function") window.refreshProducerDashboard();
     } catch (error) {
@@ -469,8 +477,13 @@ if (ledgerForm) {
       const result = await fetch("/products", {
         method: "POST", credentials: "same-origin", body: formData
       }).then(readApiResponse);
+      const addedName = formData.get("product_name");
+      const addedStock = Number(formData.get("stock_level"));
       ledgerForm.reset();
-      showSystemFeedback("ledger-feedback", "New product added to your inventory.", "success");
+      showSystemFeedback("ledger-feedback",
+        `“${addedName}” was added to your inventory with ${addedStock} units. You can edit it in Current Ledger.`,
+        "success");
+      document.getElementById("ledger-feedback")?.scrollIntoView({ behavior: "smooth", block: "nearest" });
       fetchInventoryData("/products");
       if (typeof window.refreshProducerDashboard === "function") window.refreshProducerDashboard();
     } catch (error) {
@@ -486,13 +499,14 @@ if (ledgerForm) {
 
 /* product deletion */
 
-async function deleteProduct(productId) {
+async function deleteProduct(productId, productName = "Product") {
   if (!confirm("Remove this product from your inventory? Existing orders will remain on record.")) return;
   try {
     const result = await fetch("/products/" + encodeURIComponent(productId), {
       method: "DELETE", credentials: "same-origin"
     }).then(readApiResponse);
-    showSystemFeedback("ledger-feedback", "Product removed from your inventory.", "success");
+    showSystemFeedback("ledger-feedback", `“${productName}” has been removed from your active inventory.`, "success");
+    document.getElementById("ledger-feedback")?.scrollIntoView({ behavior: "smooth", block: "nearest" });
     fetchInventoryData("/products");
     if (typeof window.refreshProducerDashboard === "function") window.refreshProducerDashboard();
   } catch (error) {
@@ -745,7 +759,7 @@ async function initSessionUI() {
   return true;
 }
 
-async function logout() {
+async function logout(confirmation = "") {
   // Clear the HttpOnly session cookie server-side before navigating away.
   // The frontend also clears its existing local session state.
   try {
@@ -763,6 +777,7 @@ async function logout() {
     cart = [];
     invalidateCheckoutAttempt();
     localStorage.removeItem("glh_cart");
+    if (confirmation) sessionStorage.setItem("glh_flash_notice", confirmation);
     window.location.href = "index.html";
   }
 }
@@ -775,7 +790,7 @@ async function deleteAccount() {
     await fetch("/users/" + encodeURIComponent(userId), {
       method: "DELETE", credentials: "same-origin"
     }).then(readApiResponse);
-    await logout();
+    await logout("Your account has been deleted successfully.");
   } catch (error) {
     showSystemFeedback("account-feedback",
       error.message || "Unable to delete this account. Please try again.", "error");
@@ -986,7 +1001,10 @@ async function submitUpdateDetails() {
     if (title) title.textContent = "Welcome Back, " + data.full_name.split(" ")[0] + ".";
     document.getElementById("account-update-form").style.display = "none";
     document.getElementById("account-main-options").style.display = "block";
-    showSystemFeedback("account-feedback", "Your account details have been saved.", "success");
+    showSystemFeedback("account-feedback",
+      password ? "Account updated successfully. Your new password is now active." :
+        "Account updated successfully. Your name and email changes have been saved.",
+      "success");
   } catch (error) {
     showSystemFeedback("account-feedback",
       error.message || "Unable to save your account details. Please try again.", "error");
@@ -1419,8 +1437,22 @@ function loadOrderHistory(authenticatedCustomerId) {
       if (!Array.isArray(orders)) throw new Error("Invalid order history response.");
       tbody.innerHTML = "";
       if (orders.length === 0) {
-        tbody.innerHTML =
-          "<tr><td colspan='5' style=\"font-family:'Courier New',monospace;font-size:12px;padding:24px;color:#555;\">NO ORDERS ON RECORD.</td></tr>";
+        const row = document.createElement("tr");
+        const cell = document.createElement("td");
+        cell.colSpan = 5;
+        cell.className = "order-history-empty";
+        const title = document.createElement("h3");
+        title.className = "order-history-empty-title";
+        title.textContent = "Your first order starts here.";
+        const explanation = document.createElement("p");
+        explanation.textContent = "You haven't placed any orders yet. Explore the produce available from GLH CO-OP farmers.";
+        const shopLink = document.createElement("a");
+        shopLink.className = "order-history-empty-link";
+        shopLink.href = "products.html";
+        shopLink.textContent = "BROWSE PRODUCE →";
+        cell.append(title, explanation, shopLink);
+        row.appendChild(cell);
+        tbody.appendChild(row);
         return;
       }
       orders.forEach((order) => {
@@ -1504,6 +1536,16 @@ document.addEventListener("DOMContentLoaded", async () => {
   // Verify a signed server session before rendering protected portal data.
   if (!(await initSessionUI())) return;
   updateCartCount();
+  const flash = sessionStorage.getItem("glh_flash_notice");
+  if (flash) {
+    sessionStorage.removeItem("glh_flash_notice");
+    const notice = document.createElement("p");
+    notice.className = "glh-inline-notice glh-flash-notice";
+    notice.dataset.kind = "success";
+    notice.setAttribute("role", "status");
+    notice.textContent = flash;
+    document.querySelector(".global-nav")?.insertAdjacentElement("afterend", notice);
+  }
   initConsentWall();
   initShopSearch();
 

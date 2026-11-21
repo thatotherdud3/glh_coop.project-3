@@ -1,0 +1,6 @@
+# Generated locally. Never commit the key used to sign login sessions.
+.glh_session_key
+
+# Python bytecode and caches.
+__pycache__/
+*.py[cod]

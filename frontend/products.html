@@ -4,8 +4,8 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>GLH | Shop Produce</title>
-    <link rel="stylesheet" href="style1.css?v=glh-cookie-controls-20261121" />
-    <link rel="stylesheet" href="shop-produce.css?v=glh-live-search-20261121" />
+    <link rel="stylesheet" href="style1.css?v=glh-session-sort-polish-20261121" />
+    <link rel="stylesheet" href="shop-produce.css?v=glh-session-sort-polish-20261121" />
   </head>
   <body>
     <input type="checkbox" id="menu-toggle" class="menu-checkbox" />
@@ -58,6 +58,16 @@
         <input id="shop-search" type="search" autocomplete="off"
                placeholder="Search produce, producer or batch..."
                aria-describedby="shop-search-count" />
+        <div class="shop-sort-group">
+          <label for="shop-sort">SORT BY</label>
+          <select id="shop-sort">
+            <option value="name-asc">Name A–Z</option>
+            <option value="name-desc">Name Z–A</option>
+            <option value="price-asc">Price: low to high</option>
+            <option value="price-desc">Price: high to low</option>
+            <option value="availability">Availability: in stock first</option>
+          </select>
+        </div>
         <p id="shop-search-count" role="status" aria-live="polite">LOADING INVENTORY…</p>
       </div>
     </section>
@@ -69,6 +79,6 @@
         <h2>TRACEABLE.<br />LOCAL.<br />VERIFIED.</h2>
       </div>
     </footer>
-    <script src="app.js?v=glh-session-search-consent-20261121"></script>
+    <script src="app.js?v=glh-session-sort-polish-20261121"></script>
   </body>
 </html>
