@@ -397,7 +397,6 @@ function deleteProduct(productId) {
   fetch(`http://127.0.0.1:8000/products/${productId}`, {
     method: "DELETE",
     mode: "cors",
-    headers: { "Access-Control-Allow-Origin": "*" },
   })
     .then((response) => {
       if (response.ok) {
@@ -547,7 +546,7 @@ function initSessionUI() {
   const page = window.location.pathname.split("/").pop() || "index.html";
 
   // page guards: bounce unauthenticated users back to login
-  if (page === "customer-portal.html" && !userId) {
+  if (page === "customer-portal.html" && (!userId || role !== "customer")) {
     window.location.href = "customer-login.html";
     return;
   }
@@ -559,10 +558,7 @@ function initSessionUI() {
   }
 
   // stops any logged in user from seeing the login form again
-  if (page === "customer-login.html" && userId) {
-    window.location.href = "customer-portal.html";
-    return;
-  }
+  // Customer login is always accessible so expired sessions can sign in again.
   // Keep the producer login form available when visited explicitly.
   // The API replaces any old producer session when credentials are submitted.
 
@@ -1105,10 +1101,9 @@ function initiateCheckout() {
     })
     .then((data) => {
       if (data.status === "success") {
-        alert(`TRANSACTION COMPLETE: Order Ref #${data.order_id} committed to ledger.`);
         cart = [];
         saveCart();
-        window.location.href = "customer-portal.html";
+        window.location.href = "order-confirmation.html?order_id=" + encodeURIComponent(data.order_id);
       } else {
         alert(`SYSTEM ERROR: ${data.message || "Unable to complete transaction."}`);
       }
@@ -1149,7 +1144,7 @@ function loadOrderHistory() {
         const row = document.createElement("tr");
         // pads the order id to 6 digits to make the GLH reference number
         row.innerHTML = `
-          <td class="ref-cell">GLH-${String(order.order_id).padStart(6, "0")}</td>
+          <td class="ref-cell"><a href="order-confirmation.html?order_id=${encodeURIComponent(order.order_id)}">GLH-${String(order.order_id).padStart(6, "0")}</a></td>
           <td>${formatted}</td>
           <td>${order.item_count}</td>
           <td>£ ${parseFloat(order.total_price).toFixed(2)}</td>
