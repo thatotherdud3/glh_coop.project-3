@@ -1,0 +1,123 @@
+/* Producer terminal live figures and order-line fulfilment controls. */
+.metrics-grid .metric-caption {
+  margin-top: 15px;
+  max-width: 320px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #777;
+}
+
+.producer-fulfilment {
+  border-bottom: 1px solid #111;
+  background: #fbfbf9;
+}
+
+.producer-fulfilment-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  gap: 20px;
+  padding: 44px 40px 32px;
+}
+
+.producer-fulfilment-heading .system-label {
+  margin-bottom: 12px;
+}
+
+.producer-fulfilment-heading h2 {
+  font-family: Didot, "Bodoni MT", Georgia, serif;
+  font-size: clamp(36px, 4vw, 56px);
+  font-weight: 400;
+  letter-spacing: -.025em;
+  line-height: 1;
+}
+
+.producer-refresh,
+.producer-fulfil-btn {
+  border: 1px solid #111;
+  background: transparent;
+  color: #111;
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  padding: 15px 19px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.producer-refresh:hover,
+.producer-fulfil-btn:hover,
+.producer-refresh:focus-visible,
+.producer-fulfil-btn:focus-visible {
+  color: #fff;
+  background: var(--glh-accent, #0000ff);
+  border-color: var(--glh-accent, #0000ff);
+}
+
+.producer-refresh:disabled,
+.producer-fulfil-btn:disabled {
+  cursor: wait;
+  opacity: .5;
+}
+
+.producer-metrics-status {
+  padding: 0 40px;
+  font-size: 12px;
+  color: #555;
+}
+
+.producer-pending-items {
+  padding-bottom: 15px;
+}
+
+.producer-pending-row {
+  display: grid;
+  grid-template-columns: minmax(140px, 1fr) minmax(150px, 1.5fr) 90px auto;
+  align-items: center;
+  gap: 24px;
+  padding: 24px 40px;
+  border-top: 1px solid #ddd;
+}
+
+.producer-pending-order {
+  font-family: "Courier New", monospace;
+  font-size: 12px;
+  letter-spacing: 1px;
+}
+
+.producer-pending-product {
+  font-family: Georgia, serif;
+  font-size: 18px;
+}
+
+.producer-pending-quantity {
+  color: #555;
+  font-size: 12px;
+}
+
+.producer-empty-queue {
+  padding: 20px 40px 38px;
+  font-family: "Courier New", monospace;
+  font-size: 12px;
+  color: #666;
+  letter-spacing: 1px;
+}
+
+@media (max-width: 700px) {
+  .producer-fulfilment-heading {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 35px 24px 28px;
+  }
+  .producer-metrics-status { padding: 0 24px; }
+  .producer-pending-row {
+    grid-template-columns: 1fr auto;
+    gap: 14px;
+    padding: 22px 24px;
+  }
+  .producer-pending-product { grid-column: 1 / -1; grid-row: 2; }
+  .producer-pending-quantity { grid-column: 1; grid-row: 3; }
+  .producer-fulfil-btn { grid-column: 2; grid-row: 3; }
+  .producer-empty-queue { padding: 22px 24px 32px; }
+}

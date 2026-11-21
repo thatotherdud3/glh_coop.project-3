@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Producer Terminal // GLH CO-OP</title>
     <link rel="stylesheet" href="style1.css" />
+    <link rel="stylesheet" href="producer-metrics.css" />
   </head>
   <body>
     <input type="checkbox" id="menu-toggle" class="menu-checkbox" />
@@ -53,19 +54,33 @@
         </div>
       </header>
 
-      <section class="metrics-grid">
+      <section class="metrics-grid" aria-label="Producer performance figures">
         <div class="metric-box">
           <span class="metric-label">Revenue MTD</span>
-          <div class="metric-value">£---</div>
+          <div class="metric-value" id="producer-revenue" aria-live="polite">£—</div>
+          <p class="metric-caption" id="producer-revenue-note">Product order value, excluding delivery.</p>
         </div>
         <div class="metric-box">
           <span class="metric-label">Active Stock</span>
-          <div class="metric-value">-- Units</div>
+          <div class="metric-value" id="producer-stock" aria-live="polite">— Units</div>
+          <p class="metric-caption">Total available units across your products.</p>
         </div>
         <div class="metric-box">
-          <span class="metric-label">Pending Fulfillment</span>
-          <div class="metric-value">-- Orders</div>
+          <span class="metric-label">Pending Fulfilment</span>
+          <div class="metric-value" id="producer-pending" aria-live="polite">— Orders</div>
+          <p class="metric-caption">Orders containing unfulfilled items from your stock.</p>
         </div>
+      </section>
+      <section class="producer-fulfilment" aria-labelledby="producer-fulfilment-title">
+        <div class="producer-fulfilment-heading">
+          <div>
+            <span class="system-label text-blue">LIVE ORDERS</span>
+            <h2 id="producer-fulfilment-title">Fulfilment Queue.</h2>
+          </div>
+          <button type="button" class="producer-refresh" id="producer-refresh">REFRESH ORDERS</button>
+        </div>
+        <p class="producer-metrics-status" id="producer-metrics-status" role="status" aria-live="polite"></p>
+        <div id="producer-pending-items" class="producer-pending-items" aria-live="polite"></div>
       </section>
 
       <form class="manifest-grid" id="ledger-form">
@@ -292,5 +307,6 @@
       </section>
     </main>
     <script src="app.js"></script>
+    <script src="producer-metrics.js"></script>
   </body>
 </html>

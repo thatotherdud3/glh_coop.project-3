@@ -287,6 +287,9 @@ if (ledgerForm) {
         ledgerForm.reset();
         // refreshes the ledger table to show the new entry
         fetchInventoryData("http://127.0.0.1:8000/products");
+        if (typeof window.refreshProducerDashboard === "function") {
+          window.refreshProducerDashboard();
+        }
       })
       .catch((error) => {
         console.error("POST ERROR:", error);
@@ -316,6 +319,9 @@ function deleteProduct(productId) {
         console.log(`DELETION SUCCESS: ID ${productId} purged.`);
         // reloads the ledger so the deleted row disappears straight away
         fetchInventoryData("http://127.0.0.1:8000/products");
+        if (typeof window.refreshProducerDashboard === "function") {
+          window.refreshProducerDashboard();
+        }
       } else {
         throw new Error("Server rejected the purge request.");
       }
@@ -418,6 +424,11 @@ if (authFormObj) {
             localStorage.setItem("session_user_id", data.user_id);
             localStorage.setItem("session_role", data.role);
             localStorage.setItem("session_full_name", data.full_name);
+            if (data.role === "producer" && data.session_token) {
+              localStorage.setItem("session_producer_token", data.session_token);
+            } else {
+              localStorage.removeItem("session_producer_token");
+            }
 
             // redirects to the correct portal based on role
             window.location.href = data.redirect_url;
@@ -513,6 +524,7 @@ function logout() {
   localStorage.removeItem("session_user_id");
   localStorage.removeItem("session_role");
   localStorage.removeItem("session_full_name");
+  localStorage.removeItem("session_producer_token");
   // clears the cart so it doesnt carry over to the next session
   cart = [];
   localStorage.removeItem("glh_cart");
@@ -946,7 +958,7 @@ function loadOrderHistory() {
           <td>${formatted}</td>
           <td>${order.item_count}</td>
           <td>£ ${parseFloat(order.total_price).toFixed(2)}</td>
-          <td class="status-cell">Delivered</td>`;
+          <td class="status-cell">${order.fulfilment_status || "Pending"}</td>`;
         tbody.appendChild(row);
       });
     })
