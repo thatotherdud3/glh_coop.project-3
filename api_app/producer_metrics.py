@@ -57,6 +57,34 @@ def producer_from_request(connection, headers):
     return producer_from_token(connection, headers.get("Authorization"))
 
 
+
+def customer_from_request(connection, headers):
+    """Require a valid signed customer session; never trust a browser user ID."""
+    raw_cookie = headers.get("Cookie", "")
+    if not raw_cookie:
+        return None
+    cookies = SimpleCookie()
+    try:
+        cookies.load(raw_cookie)
+        ticket = cookies.get("glh_customer_session")
+        if not ticket:
+            return None
+        token = ticket.value
+        payload, signature = token.rsplit(".", 1)
+        user_id, expires = map(int, payload.split(":"))
+        expected = hmac.new(_TOKEN_KEY, payload.encode(), hashlib.sha256).hexdigest()
+        if user_id <= 0 or time.time() >= expires:
+            return None
+        if not hmac.compare_digest(signature, expected):
+            return None
+        user = connection.execute(
+            "SELECT 1 FROM users WHERE user_id = ? AND role = 'customer'",
+            (user_id,),
+        ).fetchone()
+        return user_id if user else None
+    except (TypeError, ValueError, KeyError):
+        return None
+
 def ensure_producer_metrics_schema(connection):
     tables = {r["name"] for r in connection.execute(
         "SELECT name FROM sqlite_master WHERE type='table'"
