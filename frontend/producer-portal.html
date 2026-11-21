@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Producer Terminal // GLH CO-OP</title>
-    <link rel="stylesheet" href="style1.css" />
+    <link rel="stylesheet" href="style1.css?v=glh-checkout-edit-20261121" />
     <link rel="stylesheet" href="producer-metrics.css?v=glh-producer-auth-20261121" />
   </head>
   <body>
@@ -115,6 +115,12 @@
                 placeholder="Product Descriptor"
                 required
               />
+            </div>
+
+            <div class="input-row">
+              <label class="input-label" for="input-description">Product Description (Optional)</label>
+              <textarea id="input-description" class="system-input" rows="3" maxlength="1500"
+                placeholder="Describe sourcing, preparation or product characteristics."></textarea>
             </div>
 
             <div class="input-row">
@@ -290,6 +296,42 @@
 
       <section class="ledger-container">
         <span class="system-label ledger-label">Current Ledger</span>
+        <p id="ledger-feedback" class="glh-inline-notice" role="status" aria-live="polite" hidden></p>
+        <form id="product-edit-form" class="ledger-edit-form" hidden>
+          <span class="system-label text-blue">AMEND EXISTING STOCK</span>
+          <h3 id="edit-product-title">Edit Product</h3>
+          <p class="ledger-edit-help">Updates are saved to the existing listing. Previously placed orders retain their recorded item prices.</p>
+          <div class="ledger-edit-grid">
+            <label>PRODUCT NAME
+              <input class="system-input" id="edit-product-name" type="text" required maxlength="255" />
+            </label>
+            <label>BATCH REFERENCE
+              <input class="system-input" id="edit-product-batch" type="text" required maxlength="100" />
+            </label>
+            <label>UNIT PRICE (£)
+              <input class="system-input" id="edit-product-price" type="number" min="0" max="100000" step="0.01" required />
+            </label>
+            <label>STOCK AVAILABLE
+              <input class="system-input" id="edit-product-stock" type="number" min="0" max="1000000" step="1" required />
+            </label>
+            <label>HARVEST DATE (OPTIONAL)
+              <input class="system-input" id="edit-product-harvest" type="date" />
+            </label>
+            <label class="ledger-edit-wide">DESCRIPTION (OPTIONAL)
+              <textarea class="system-input" id="edit-product-description" rows="3" maxlength="1500"></textarea>
+            </label>
+            <label class="ledger-edit-wide">ALLERGEN DECLARATION
+              <textarea class="system-input" id="edit-product-allergens" rows="2" maxlength="500" required
+                aria-describedby="edit-allergen-guidance"></textarea>
+              <span class="ledger-edit-help" id="edit-allergen-guidance">Enter all applicable regulated allergens, or 'No Allergens Present' only if verified. Do not invent cross-contact warnings.</span>
+            </label>
+          </div>
+          <p id="product-edit-feedback" class="glh-inline-notice" role="status" aria-live="polite" hidden></p>
+          <div class="ledger-edit-actions">
+            <button type="submit" id="edit-product-save" class="system-submit">SAVE CHANGES</button>
+            <button type="button" id="edit-product-cancel" class="ledger-edit-cancel">CANCEL</button>
+          </div>
+        </form>
         <div class="table-wrapper">
           <table class="ledger-table">
             <thead>
@@ -307,7 +349,7 @@
         </div>
       </section>
     </main>
-    <script src="app.js?v=glh-secure-confirm-20261121"></script>
+    <script src="app.js?v=glh-checkout-edit-20261121"></script>
     <script src="producer-metrics.js?v=glh-producer-cookie-20261121"></script>
   </body>
 </html>

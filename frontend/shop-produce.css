@@ -157,3 +157,5 @@
   background: #fbfbf9;
 }
 .shop-produce-grid .shop-add-feedback:empty { display: none; }
+
+.shop-produce-grid .product-description{font:400 13px/1.6 Helvetica,Arial,sans-serif;color:#555;margin:0 0 18px;overflow-wrap:anywhere}
