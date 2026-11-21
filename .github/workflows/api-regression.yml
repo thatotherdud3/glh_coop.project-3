@@ -1,0 +1,27 @@
+name: GLH security and API checks
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  api-regression:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Check Python syntax
+        run: python -m compileall -q api_app tests
+      - name: Test authentication, checkout and ownership
+        run: python -m unittest discover -s tests -v
+      - name: Check JavaScript syntax
+        run: |
+          node --check frontend/app.js
+          node --check frontend/order-confirmation.js
+          node --check frontend/producer-metrics.js
