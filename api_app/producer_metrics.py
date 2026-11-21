@@ -59,11 +59,11 @@ def producer_from_request(connection, headers):
 
 
 def customer_from_request(connection, headers):
-    """Authenticate shopping actions with a signed customer OR producer cookie.
+    """Authorise shopping for customers and signed-in producers alike.
 
-    Producers can also shop with the same account; the producer role is
-    never granted to a customer and owner-only order checks still apply.
-    Bearer tokens do not authenticate customer shopping actions.
+    Shopping always requires a signed, HttpOnly browser cookie. Reuse the
+    producer validator for producer shopping so dashboard and checkout cannot
+    disagree about whether the same producer session is valid.
     """
     raw_cookie = headers.get("Cookie", "")
     if not raw_cookie:
@@ -71,28 +71,32 @@ def customer_from_request(connection, headers):
     try:
         cookies = SimpleCookie()
         cookies.load(raw_cookie)
-        for cookie_name, required_role in (
-            ("glh_customer_session", "customer"),
-            ("glh_producer_session", "producer"),
-        ):
-            ticket = cookies.get(cookie_name)
-            if not ticket:
-                continue
-            payload, signature = ticket.value.rsplit(".", 1)
+    except (TypeError, ValueError):
+        return None
+
+    customer_cookie = cookies.get("glh_customer_session")
+    if customer_cookie:
+        try:
+            payload, signature = customer_cookie.value.rsplit(".", 1)
             user_id, expires = map(int, payload.split(":"))
             expected = hmac.new(_TOKEN_KEY, payload.encode(), hashlib.sha256).hexdigest()
-            if user_id <= 0 or time.time() >= expires:
-                continue
-            if not hmac.compare_digest(signature, expected):
-                continue
-            user = connection.execute(
-                "SELECT 1 FROM users WHERE user_id = ? AND role = ?",
-                (user_id, required_role),
-            ).fetchone()
-            if user:
+            if (
+                user_id > 0
+                and time.time() < expires
+                and hmac.compare_digest(signature, expected)
+                and connection.execute(
+                    "SELECT 1 FROM users WHERE user_id = ? AND role = 'customer'",
+                    (user_id,),
+                ).fetchone()
+            ):
                 return user_id
-    except (TypeError, ValueError, KeyError):
-        return None
+        except (TypeError, ValueError):
+            # A stale customer cookie must not shadow a valid producer cookie.
+            pass
+
+    producer_cookie = cookies.get("glh_producer_session")
+    if producer_cookie:
+        return producer_from_token(connection, "Bearer " + producer_cookie.value)
     return None
 
 
