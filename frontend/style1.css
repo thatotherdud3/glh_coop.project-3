@@ -1928,6 +1928,28 @@ body:has(.menu-checkbox:checked) {
 
 /* mobile font size overrides */
 @media (max-width: 600px) {
+  /* Keep the wordmark separate from stacked mobile account actions. */
+  .global-nav {
+    grid-template-columns: 32px minmax(0, 1fr) max-content;
+    column-gap: 10px;
+    padding: 14px 16px;
+  }
+  .logo {
+    font-size: clamp(11px, 3vw, 15px);
+    letter-spacing: 0.7px;
+    white-space: nowrap;
+  }
+  .nav-right {
+    flex-direction: column-reverse; /* LOGOUT above CART (cart appears first in markup). */
+    align-items: flex-end;
+    justify-content: center;
+    gap: 6px;
+  }
+  .nav-right .nav-item {
+    font-size: 12px;
+    line-height: 1.2;
+    white-space: nowrap;
+  }
   .hero-section h1 {
     font-size: 48px;
   }
