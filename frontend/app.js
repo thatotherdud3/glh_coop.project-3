@@ -867,7 +867,8 @@ function calculateCartTotals() {
     (sum, item) => sum + Math.round(Number(item.price || 0) * 100) * Number(item.quantity || 0), 0
   );
   const deliveryMethod = document.querySelector('input[name="delivery-method"]:checked')?.value || "hub";
-  const deliveryPence = cart.length && deliveryMethod === "direct" ? 1500 : 0;
+  const deliveryPence = cart.length && deliveryMethod === "direct"
+    ? Math.round(CART_DIRECT_DELIVERY_FEE * 100) : 0;
   return {
     subtotal: subtotalPence / 100,
     deliveryFee: deliveryPence / 100,
