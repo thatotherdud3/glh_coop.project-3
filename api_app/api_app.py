@@ -150,6 +150,36 @@ def insert_inventory(data):
     print(f"CORE LOG: Asset {data.get('product_name')} successfully committed to ledger.")
 
 
+
+def validate_allergen_declaration(value):
+    """Validate declared ingredients and possible contact without rewriting legacy records.
+
+    Contemporary UI uses: Contains: ... | May contain: ...
+    Older saved product descriptions remain editable without migration.
+    """
+    if not isinstance(value, str):
+        raise ValueError("Provide an allergen declaration.")
+    declaration = value.strip()
+    if not declaration or len(declaration) > 500:
+        raise ValueError("Enter allergen information within 500 characters.")
+
+    lowered = declaration.casefold()
+    if lowered.startswith("contains:"):
+        components = declaration[len("Contains:"):].split(" | May contain: ")
+        if len(components) > 2 or not components[0].strip():
+            raise ValueError("Specify allergens used as ingredients.")
+        if len(components) == 2 and not components[1].strip():
+            raise ValueError("Describe the possible cross contact or remove that heading.")
+        contains = components[0].strip().casefold()
+        if contains.startswith("none of the listed allergens") and contains != "none of the listed allergens":
+            raise ValueError("Do not combine the absence declaration with named allergens.")
+        if contains.startswith("no allergens present") and contains != "no allergens present":
+            raise ValueError("Do not combine the absence declaration with named allergens.")
+    elif "no allergens present" in lowered and "may contain" in lowered:
+        raise ValueError("Use separate ingredients and possible contact declarations.")
+    return declaration
+
+
 class NativeAPIHandler(SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         # tells the server to serve files from the frontend folder
@@ -730,6 +760,7 @@ class NativeAPIHandler(SimpleHTTPRequestHandler):
                 description = (data.get("product_description") or "").strip()
                 if len(description) > 1500:
                     raise ValueError("Description cannot exceed 1500 characters.")
+                allergen_declaration = validate_allergen_declaration(data.get("allergen_info"))
 
                 final_payload = {
                     "harvest_date": harvest_date,
@@ -738,7 +769,7 @@ class NativeAPIHandler(SimpleHTTPRequestHandler):
                     "product_name": data.get("product_name"),
                     "stock_level": stock_level,
                     "price": price,
-                    "allergen_info": data.get("allergen_info"),
+                    "allergen_info": allergen_declaration,
                     "product_image": image_filename,
                     "product_description": description
                 }
@@ -1074,8 +1105,7 @@ class NativeAPIHandler(SimpleHTTPRequestHandler):
                     raise ValueError("Enter a product name (maximum 255 characters).")
                 if not batch or len(batch) > 100:
                     raise ValueError("Enter a batch reference (maximum 100 characters).")
-                if not allergen or len(allergen) > 500:
-                    raise ValueError("Declare allergens or select 'No Allergens Present'.")
+                allergen = validate_allergen_declaration(allergen)
                 if len(description) > 1500:
                     raise ValueError("Description cannot exceed 1500 characters.")
                 if harvest is not None:

@@ -459,6 +459,41 @@ class SecurityWorkflowTests(unittest.TestCase):
         self.assertEqual(self.query("SELECT COUNT(*) FROM orders")[0], 0)
         self.assertEqual(self.query("SELECT stock_level FROM products WHERE product_id = 11")[0], 10)
 
+
+    def test_allergen_declarations_require_details_and_separate_cross_contact(self):
+        validate = api_app.validate_allergen_declaration
+        self.assertEqual(
+            validate("Contains: Eggs, Milk | May contain: Peanuts"),
+            "Contains: Eggs, Milk | May contain: Peanuts",
+        )
+        self.assertEqual(validate("Contains: None of the listed allergens"), "Contains: None of the listed allergens")
+        self.assertEqual(validate("No Allergens Present"), "No Allergens Present")
+        for value in ("", None, "Contains: ", "Contains: Milk | May contain: ",
+                      "Contains: None of the listed allergens, Milk",
+                      "No Allergens Present; May contain: Peanuts",
+                      "Contains: " + "x" * 501):
+            with self.subTest(value=value):
+                with self.assertRaises(ValueError):
+                    validate(value)
+
+        edit = {
+            "product_name": "Carrots", "batch_number": "A11",
+            "price": 3, "stock_level": 10, "harvest_date": None,
+            "product_description": "Fresh produce",
+            "allergen_info": "Contains: None of the listed allergens | May contain: Peanuts",
+        }
+        status, response, _ = self.send(
+            "PUT", "/products/11", payload=edit, session_role="producer", user_id=2
+        )
+        self.assertEqual(status, 200, response)
+        self.assertEqual(self.query(
+            "SELECT allergen_info FROM products WHERE product_id = 11"
+        )[0], edit["allergen_info"])
+        edit["allergen_info"] = "Contains: None of the listed allergens, Milk"
+        self.assertEqual(self.send(
+            "PUT", "/products/11", payload=edit, session_role="producer", user_id=2
+        )[0], 400)
+
     def test_product_edit_requires_ownership_and_validates_fields(self):
         payload = {
             "product_name": "Heritage Carrots", "batch_number": "A11",
