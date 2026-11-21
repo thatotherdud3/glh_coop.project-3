@@ -165,7 +165,7 @@ def validate_allergen_declaration(value):
 
     lowered = declaration.casefold()
     if lowered.startswith("contains:"):
-        components = re.split(r"\\s*\\|\\s*May contain:\\s*", declaration[len("Contains:"):], flags=re.IGNORECASE)
+        components = re.split(r"\s*\|\s*May contain:\s*", declaration[len("Contains:"):], flags=re.IGNORECASE)
         if len(components) > 2 or not components[0].strip():
             raise ValueError("Specify allergens used as ingredients.")
         if len(components) == 2 and not components[1].strip():
