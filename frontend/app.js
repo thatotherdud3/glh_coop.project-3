@@ -253,7 +253,8 @@ function populateShop(inventory, container) {
         return;
       }
       if (addToCart(item.product_id, item.product_name, Number(item.price), stock, selected, item)) {
-        feedback.textContent = `${selected} UNIT${selected === 1 ? "" : "S"} ADDED TO CART`;
+        const totalForProduct = cart.find((entry) => Number(entry.product_id) === Number(item.product_id))?.quantity ?? selected;
+        feedback.textContent = `${totalForProduct} UNIT${totalForProduct === 1 ? "" : "S"} NOW IN CART`;
         quantityInput.value = "1";
         updateQuantityControls();
       }
