@@ -936,6 +936,8 @@ function submitUpdateDetails() {
 /* cart page — image synchronisation, quantity steppers and totals */
 
 const CART_DIRECT_DELIVERY_FEE = 15.00;
+let checkoutInFlight = false;
+const CART_CHECKOUT_LABEL = "AUTHORISE TRANSACTION";
 
 function formatCartCurrency(value) {
   return Number(value).toLocaleString("en-GB", { style: "currency", currency: "GBP" });
@@ -1062,13 +1064,18 @@ function updateItemQty(index, requestedQty) {
   const requested = Number(requestedQty);
   if (!Number.isInteger(requested)) return;
   item.quantity = Math.min(Math.max(requested, 1), maxStock);
+  invalidateCheckoutAttempt();
   saveCart();
+  showSystemFeedback("cart-feedback", "");
+
   renderCartPage();
 }
 
 function removeItem(index) {
   cart.splice(index, 1);
+  invalidateCheckoutAttempt();
   saveCart();
+  showSystemFeedback("cart-feedback", "Product removed from your cart.", "info");
   renderCartPage();
 }
 
@@ -1090,7 +1097,7 @@ function updateOrderSummary() {
   const warning = document.querySelector(".cart-stock-message");
   if (warning) warning.hidden = !stockIssue;
   const button = document.querySelector(".cart-submit");
-  if (button) button.disabled = !cart.length || stockIssue;
+  if (button) button.disabled = checkoutInFlight || !cart.length || stockIssue;
 }
 
 function initCartDeliverySelection() {
@@ -1111,7 +1118,18 @@ function initCartDeliverySelection() {
     });
     updateOrderSummary();
   }
-  radios.forEach(radio => radio.addEventListener("change", syncFields));
+  radios.forEach(radio => radio.addEventListener("change", () => {
+    invalidateCheckoutAttempt();
+    showSystemFeedback("cart-feedback", "");
+    syncFields();
+  }));
+  collectionSelect.addEventListener("change", () => {
+    invalidateCheckoutAttempt();
+    showSystemFeedback("cart-feedback", "");
+  });
+  addressPanel.querySelectorAll("input, select").forEach(field => {
+    field.addEventListener("change", invalidateCheckoutAttempt);
+  });
   addressPanel.querySelectorAll("input").forEach(field => {
     field.addEventListener("input", () => field.setCustomValidity(""));
   });
@@ -1154,47 +1172,142 @@ function getCartRouting() {
   return { collection_node_code: null, delivery_address: address };
 }
 
-function initiateCheckout() {
-  const userId = localStorage.getItem("session_user_id");
-  if (!userId) {
-    alert("SYSTEM LOG: Authentication required to execute transaction. Routing to Customer Node.");
-    window.location.href = "customer-login.html";
+function getOrCreateCheckoutKey() {
+  let key = localStorage.getItem("glh_checkout_key");
+  if (!key) {
+    key = (globalThis.crypto?.randomUUID?.() ||
+      "glh-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2));
+    localStorage.setItem("glh_checkout_key", key);
+  }
+  return key;
+}
+
+async function verifyCartAgainstInventory() {
+  // Inspect the latest live stock and prices before asking the server to write.
+  // The API repeats these checks under a SQLite transaction.
+  const response = await fetch("/products?t=" + Date.now(), {
+    cache: "no-store", credentials: "same-origin"
+  });
+  const products = await readApiResponse(response);
+  if (!Array.isArray(products)) throw new Error("Inventory response was invalid.");
+  const byId = new Map(products.map(product => [Number(product.product_id), product]));
+  let priceChanged = false;
+  let stockChanged = false;
+  let missing = false;
+  let metadataChanged = false;
+  for (const item of cart) {
+    const latest = byId.get(Number(item.product_id));
+    if (!latest) {
+      missing = true;
+      item.max_stock = 0;
+      metadataChanged = true;
+      continue;
+    }
+    const newPrice = Number(latest.price);
+    const newStock = Math.max(0, Math.floor(Number(latest.stock_level) || 0));
+    if (Math.round(Number(item.price) * 100) !== Math.round(newPrice * 100)) priceChanged = true;
+    if (Number(item.quantity) > newStock) stockChanged = true;
+    if (Number(item.max_stock) !== newStock) metadataChanged = true;
+    item.price = newPrice;
+    item.max_stock = newStock;
+    item.product_name = latest.product_name;
+    item.product_image = latest.product_image || "placeholder.png";
+    item.producer_name = latest.producer_name || "";
+    item.batch_number = latest.batch_number || "";
+    item.allergen_info = latest.allergen_info || "";
+  }
+  if (priceChanged || stockChanged || missing || metadataChanged) {
+    saveCart();
+    renderCartPage();
+  }
+  if (missing) return "A product is no longer listed. Remove it from your cart before checkout.";
+  if (stockChanged) return "Some items have less stock available. Review the quantities highlighted in your cart.";
+  if (priceChanged) return "One or more prices have changed. The new total is displayed; review it before authorising your order.";
+  return null;
+}
+
+async function initiateCheckout() {
+  if (checkoutInFlight) return; // Guard before any asynchronous request.
+  if (localStorage.getItem("session_role") !== "customer" ||
+      !localStorage.getItem("session_user_id")) {
+    showSystemFeedback("cart-feedback", "Sign in through Customer Node to place this order. Your cart will be saved.", "error");
+    const signIn = document.getElementById("cart-sign-in-link");
+    if (signIn) signIn.hidden = false;
     return;
   }
   if (!cart.length) {
-    alert("SYSTEM HALT: Cannot process an empty ledger.");
+    showSystemFeedback("cart-feedback", "Your cart is empty. Add some produce to continue.", "error");
     return;
   }
-  if (cart.some((item) => Number(item.quantity) < 1 || Number(item.quantity) > Number(item.max_stock))) {
-    alert("SYSTEM HALT: Some products exceed available stock. Please adjust your cart.");
+  if (cart.some(item => Number(item.quantity) < 1 ||
+      Number(item.quantity) > Number(item.max_stock))) {
+    showSystemFeedback("cart-feedback", "Some quantities exceed available stock. Adjust the items before checkout.", "error");
     return;
   }
   const routing = getCartRouting();
-  if (!routing) return;
-  const { total, deliveryMethod } = calculateCartTotals();
-  fetch("/checkout", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ customer_id: userId, cart, delivery_method: deliveryMethod, total_price: total, ...routing })
-  })
-    .then(async (response) => {
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.message || "Checkout was rejected.");
-      return data;
-    })
-    .then((data) => {
-      if (data.status === "success") {
-        cart = [];
-        saveCart();
-        window.location.href = "order-confirmation.html?order_id=" + encodeURIComponent(data.order_id);
-      } else {
-        alert(`SYSTEM ERROR: ${data.message || "Unable to complete transaction."}`);
-      }
-    })
-    .catch((error) => {
-      console.error("CHECKOUT ERROR:", error);
-      alert(`SYSTEM ERROR: ${error.message}`);
+  if (!routing) {
+    showSystemFeedback("cart-feedback", "Choose a collection node or complete your delivery address.", "error");
+    return;
+  }
+  checkoutInFlight = true;
+  const submitButton = document.querySelector(".cart-submit");
+  if (submitButton) {
+    submitButton.disabled = true;
+    submitButton.textContent = "VERIFYING STOCK…";
+    submitButton.setAttribute("aria-busy", "true");
+  }
+  showSystemFeedback("cart-feedback", "");
+  try {
+    const issue = await verifyCartAgainstInventory();
+    if (issue) {
+      showSystemFeedback("cart-feedback", issue, "error");
+      return;
+    }
+    const checkoutKey = getOrCreateCheckoutKey();
+    if (submitButton) submitButton.textContent = "RECORDING ORDER…";
+    const { total, deliveryMethod } = calculateCartTotals();
+    const response = await fetch("/checkout", {
+      method: "POST", credentials: "same-origin",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        cart, delivery_method: deliveryMethod, total_price: total,
+        checkout_key: checkoutKey, ...routing
+      })
     });
+    const data = await readApiResponse(response);
+    if (data.status !== "success" || !data.order_id) {
+      throw new Error(data.message || "No order reference was returned.");
+    }
+    cart = [];
+    invalidateCheckoutAttempt();
+    saveCart();
+    window.location.href = "order-confirmation.html?order_id=" +
+      encodeURIComponent(data.order_id);
+  } catch (error) {
+    if (error.status === 409) {
+      await refreshCartProductMetadata();
+      showSystemFeedback("cart-feedback",
+        error.message || "Stock or pricing changed. Review your cart and try again.", "error");
+    } else {
+      showSystemFeedback("cart-feedback",
+        error.status === 401 ? "Your customer session has expired. Sign in again to place this order." :
+        error.status ? error.message :
+        "The connection was interrupted. We cannot confirm whether the order was recorded. Retry with the same cart; duplicate submissions are protected.",
+        "error");
+      if (error.status === 401) {
+        const signIn = document.getElementById("cart-sign-in-link");
+        if (signIn) signIn.hidden = false;
+      }
+    }
+    console.error("CHECKOUT ERROR:", error);
+  } finally {
+    checkoutInFlight = false;
+    if (submitButton) {
+      submitButton.textContent = CART_CHECKOUT_LABEL;
+      submitButton.removeAttribute("aria-busy");
+    }
+    updateOrderSummary();
+  }
 }
 
 /* customer portal order history */
