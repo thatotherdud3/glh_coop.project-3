@@ -2017,3 +2017,23 @@ body:has(.menu-checkbox:checked) {
 .ledger-edit-btn:hover{background:var(--glh-accent);color:#fff}
 .ledger-item-actions .ledger-remove-btn{height:auto;min-height:45px;padding:12px;font-size:12px;letter-spacing:1px}
 @media(max-width:600px){.ledger-edit-form{padding:20px 16px}.ledger-edit-grid{grid-template-columns:1fr;gap:20px}.ledger-edit-grid .ledger-edit-wide{grid-column:1}.ledger-edit-actions{flex-direction:column}.ledger-edit-actions>*{width:100%}}
+
+/* Cookie consent: equally available optional rejection and later preference changes. */
+@media (min-width: 601px) {
+  .intercept-actions { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+  .intercept-actions .system-btn { padding-left: 8px; padding-right: 8px; }
+}
+.cookie-preferences-toggle {
+  margin-top: 34px;
+  padding: 12px 16px;
+  background: transparent;
+  border: 1px solid #fff;
+  color: #fff;
+  cursor: pointer;
+  font: 700 11px Helvetica, Arial, sans-serif;
+  letter-spacing: .09em;
+}
+.cookie-preferences-toggle:focus-visible {
+  outline: 3px solid var(--glh-accent);
+  outline-offset: 3px;
+}
