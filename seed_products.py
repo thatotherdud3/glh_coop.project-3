@@ -28,6 +28,7 @@ CREATE TABLE products (
     product_image TEXT DEFAULT 'placeholder.png',
     harvest_date TEXT DEFAULT NULL,
     safety_clearance TEXT DEFAULT NULL,
+    product_description TEXT DEFAULT NULL,
     FOREIGN KEY (producer_id) REFERENCES users(user_id)
 );
 CREATE TABLE orders (
@@ -51,6 +52,13 @@ CREATE TABLE order_items (
     fulfilled_at TEXT,
     FOREIGN KEY (order_id) REFERENCES orders(order_id),
     FOREIGN KEY (product_id) REFERENCES products(product_id)
+);
+CREATE TABLE checkout_requests (
+    customer_id INTEGER NOT NULL,
+    checkout_key TEXT NOT NULL,
+    order_id INTEGER NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (customer_id, checkout_key)
 );
 CREATE TABLE cookie_consent (
     consent_id INTEGER PRIMARY KEY AUTOINCREMENT,

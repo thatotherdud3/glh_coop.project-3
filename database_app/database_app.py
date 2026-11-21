@@ -40,6 +40,7 @@ def setup_database():
         batch_number VARCHAR(100) NOT NULL,
         harvest_date TEXT,
         safety_clearance TEXT,
+        product_description TEXT,
         FOREIGN KEY (producer_id) REFERENCES users(user_id)
     )
     """)

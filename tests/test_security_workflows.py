@@ -278,6 +278,24 @@ class SecurityWorkflowTests(unittest.TestCase):
         self.assertEqual(self.query("SELECT COUNT(*) FROM order_items")[0], 1)
         self.assertEqual(self.query("SELECT stock_level FROM products WHERE product_id = 11")[0], 8)
         self.assertEqual(self.query("SELECT COUNT(*) FROM checkout_requests")[0], 1)
+        receipt_status, receipt, _ = self.send(
+            "GET", "/checkout/status?key=retry-key-12345", session_role="customer"
+        )
+        self.assertEqual(receipt_status, 200, receipt)
+        self.assertEqual(receipt["order_id"], first["order_id"])
+        self.assertEqual(
+            self.send("GET", "/checkout/status?key=retry-key-12345",
+                      session_role="customer", user_id=4)[0], 404
+        )
+        self.assertEqual(
+            self.send("GET", "/checkout/status?key=retry-key-12345")[0], 401
+        )
+
+    def test_unrecorded_checkout_key_does_not_report_an_order(self):
+        status, result, _ = self.send(
+            "GET", "/checkout/status?key=not-recorded-12345", session_role="customer"
+        )
+        self.assertEqual(status, 404, result)
 
     def test_checkout_stale_stock_is_rejected_without_new_order(self):
         with sqlite3.connect(self.db_path) as conn:
