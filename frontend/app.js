@@ -708,6 +708,7 @@ async function logout() {
     localStorage.removeItem("session_full_name");
     localStorage.removeItem("session_producer_token");
     cart = [];
+    invalidateCheckoutAttempt();
     localStorage.removeItem("glh_cart");
     window.location.href = "index.html";
   }
@@ -1220,10 +1221,30 @@ async function verifyCartAgainstInventory() {
     saveCart();
     renderCartPage();
   }
+  if (priceChanged || stockChanged || missing) invalidateCheckoutAttempt();
   if (missing) return "A product is no longer listed. Remove it from your cart before checkout.";
   if (stockChanged) return "Some items have less stock available. Review the quantities highlighted in your cart.";
   if (priceChanged) return "One or more prices have changed. The new total is displayed; review it before authorising your order.";
   return null;
+}
+
+async function recoverCompletedCheckout() {
+  const key = localStorage.getItem("glh_checkout_key");
+  if (!key) return false;
+  const response = await fetch("/checkout/status?key=" + encodeURIComponent(key), {
+    credentials: "same-origin", cache: "no-store"
+  });
+  if (response.status === 404) return false;
+  const result = await readApiResponse(response);
+  if (result.status !== "success" || !result.order_id) return false;
+  // The first request completed even if its browser response was lost.
+  // Do not submit a second order; open the original confirmation instead.
+  cart = [];
+  invalidateCheckoutAttempt();
+  saveCart();
+  window.location.href = "order-confirmation.html?order_id=" +
+    encodeURIComponent(result.order_id);
+  return true;
 }
 
 async function initiateCheckout() {
@@ -1258,6 +1279,9 @@ async function initiateCheckout() {
   }
   showSystemFeedback("cart-feedback", "");
   try {
+    // Recover any successfully recorded prior attempt before examining stock.
+    // A completed first attempt will have reduced available inventory.
+    if (await recoverCompletedCheckout()) return;
     const issue = await verifyCartAgainstInventory();
     if (issue) {
       showSystemFeedback("cart-feedback", issue, "error");
@@ -1285,6 +1309,7 @@ async function initiateCheckout() {
       encodeURIComponent(data.order_id);
   } catch (error) {
     if (error.status === 409) {
+      invalidateCheckoutAttempt();
       await refreshCartProductMetadata();
       showSystemFeedback("cart-feedback",
         error.message || "Stock or pricing changed. Review your cart and try again.", "error");
@@ -1423,6 +1448,21 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Show the relevant collection or home-delivery form.
     initCartDeliverySelection();
+
+    // Check whether a prior submission succeeded despite a lost response,
+    // including after the customer reloads the cart.
+    if (localStorage.getItem("glh_checkout_key")) {
+      checkoutInFlight = true;
+      updateOrderSummary();
+      recoverCompletedCheckout().catch(error => {
+        showSystemFeedback("cart-feedback",
+          "We could not verify your previous checkout. Keep this cart unchanged and try again.", "error");
+        console.warn("CHECKOUT RECOVERY ERROR:", error);
+      }).finally(() => {
+        checkoutInFlight = false;
+        updateOrderSummary();
+      });
+    }
 
     // wires up the checkout button
     const submitBtn = document.querySelector(".cart-submit");
