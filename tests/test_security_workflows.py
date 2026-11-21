@@ -161,6 +161,44 @@ class SecurityWorkflowTests(unittest.TestCase):
         self.assertEqual(status, 403)
         self.assertEqual(self.query("SELECT count(*) FROM users")[0], 4)
 
+    def test_customer_registration_validates_and_handles_duplicates(self):
+        payload = {
+            "full_name": "New Member",
+            "email": "new-member@glh.test",
+            "password": "strong-password-123",
+            "role": "customer",
+        }
+        status, body, _ = self.send("POST", "/register", payload=payload)
+        self.assertEqual(status, 201, body)
+        self.assertEqual(body.get("status"), "success")
+        self.assertEqual(
+            self.query("SELECT role FROM users WHERE email = ?", (payload["email"],))[0],
+            "customer",
+        )
+        self.assertTrue(self.query(
+            "SELECT password_hash FROM users WHERE email = ?", (payload["email"],)
+        )[0].startswith("pbkdf2_sha256$"))
+        self.assertEqual(self.send("POST", "/register", payload=payload)[0], 409)
+        self.assertEqual(self.send("POST", "/register", payload={
+            **payload, "email": "short-password@glh.test", "password": "123"
+        })[0], 400)
+
+    def test_signed_session_and_order_history_require_matching_identity(self):
+        self.assertEqual(self.send("GET", "/session")[0], 401)
+        code, current_user, _ = self.send("GET", "/session", session_role="customer", user_id=1)
+        self.assertEqual(code, 200)
+        self.assertEqual(current_user["user_id"], 1)
+        self.assertEqual(current_user["role"], "customer")
+        code, producer, _ = self.send("GET", "/session", session_role="producer", user_id=2)
+        self.assertEqual(code, 200)
+        self.assertEqual(producer["role"], "producer")
+        self.assertEqual(
+            self.send("GET", "/orders/4", session_role="customer", user_id=1)[0], 403
+        )
+        code, orders, _ = self.send("GET", "/orders/1", session_role="customer", user_id=1)
+        self.assertEqual(code, 200)
+        self.assertEqual(orders, [])
+
     def test_checkout_requires_customer_and_rejects_duplicate_items(self):
         payload = {
             "customer_id": 4, "delivery_method": "hub",
