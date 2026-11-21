@@ -1,13 +1,58 @@
 """Producer dashboard, private session tokens and order-line fulfilment."""
 import hashlib
 import hmac
+import os
 import secrets
+import stat
 import time
+from pathlib import Path
 from http.cookies import SimpleCookie
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 
-_TOKEN_KEY = secrets.token_bytes(32)  # Login again after server restarts.
+
+def _load_token_signing_key():
+    """Use an environment secret or a private key persisted on this machine."""
+    configured = os.environ.get("GLH_SESSION_SECRET_HEX")
+    if configured is not None:
+        try:
+            key = bytes.fromhex(configured.strip())
+        except ValueError as error:
+            raise RuntimeError("GLH_SESSION_SECRET_HEX must be 64 hexadecimal characters.") from error
+        if len(key) != 32:
+            raise RuntimeError("GLH_SESSION_SECRET_HEX must contain exactly 32 bytes.")
+        return key
+
+    filename = Path(
+        os.environ.get("GLH_SESSION_KEY_FILE")
+        or Path(__file__).resolve().parent.parent / ".glh_session_key"
+    )
+    if filename.is_symlink():
+        raise RuntimeError("The session signing key must be a regular private file, not a symlink.")
+    try:
+        fd = os.open(filename, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+    except FileExistsError:
+        pass  # Reuse this key after restarts: previously issued sessions still verify.
+    else:
+        with os.fdopen(fd, "w", encoding="ascii") as secret_file:
+            secret_file.write(secrets.token_hex(32) + "\n")
+            secret_file.flush()
+            os.fsync(secret_file.fileno())
+
+    if filename.is_symlink() or not filename.is_file():
+        raise RuntimeError("The session signing key must be stored in a regular file.")
+    if stat.S_IMODE(filename.stat().st_mode) & 0o077:
+        raise RuntimeError("Session key permissions are too open; use chmod 600.")
+    try:
+        key = bytes.fromhex(filename.read_text(encoding="ascii").strip())
+    except ValueError as error:
+        raise RuntimeError("The session signing key file is invalid.") from error
+    if len(key) != 32:
+        raise RuntimeError("The session signing key file must contain 32 bytes.")
+    return key
+
+
+_TOKEN_KEY = _load_token_signing_key()
 _TOKEN_TTL = 24 * 60 * 60
 
 
