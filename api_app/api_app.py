@@ -21,8 +21,8 @@ PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 FRONTEND_DIR = os.path.join(PROJECT_ROOT, "frontend")
 ASSET_DIR = os.path.join(FRONTEND_DIR, "assets")
 
-# Earlier database seeds stored PNG names for files uploaded as JPG/JPEG.
-# Only fix these exact old references; do not overwrite newer product images.
+# old image names dont always match the real files
+# only fix the known ones
 LEGACY_PRODUCT_IMAGES = (
     ("ER-26-B3", "basil.png", "basil.jpg"),
     ("ER-26-B4", "tarragon.png", "tarragon.jpeg"),
@@ -59,8 +59,7 @@ def get_db_connection():
             consented_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """)
-    # Add new nullable trace fields to databases created before this feature.
-    # Historical records must not receive fabricated dates or approvals.
+    # add newer fields, but dont make up old harvest or safety info
     columns = {row["name"] for row in conn.execute("PRAGMA table_info(products)")}
     if columns:
         if "harvest_date" not in columns:
@@ -68,7 +67,7 @@ def get_db_connection():
         if "safety_clearance" not in columns:
             conn.execute("ALTER TABLE products ADD COLUMN safety_clearance TEXT")
 
-    # Safe, idempotent image data migration. No reseeding or deleted records.
+    # fix old image names without touching stock or orders
     if "product_image" in columns:
         for batch, old_name, new_name in LEGACY_PRODUCT_IMAGES:
             if os.path.isfile(os.path.join(ASSET_DIR, new_name)):
@@ -78,7 +77,7 @@ def get_db_connection():
                     (new_name, batch, old_name),
                 )
 
-    # Preserve existing orders while enabling a selected pickup node or
+    # preserve existing orders while enabling a selected pickup node or
     # delivery address to be stored with newly created orders.
     order_columns = {row["name"] for row in conn.execute("PRAGMA table_info(orders)")}
     if order_columns:
@@ -86,11 +85,11 @@ def get_db_connection():
             if name not in order_columns:
                 conn.execute(f"ALTER TABLE orders ADD COLUMN {name} TEXT")
 
-    # Add fields without replacing or reseeding existing producer inventory.
+    # add fields without replacing or reseeding existing producer inventory.
     if columns and "product_description" not in columns:
         conn.execute("ALTER TABLE products ADD COLUMN product_description TEXT")
 
-    # A retry of one checkout request must not create another order.
+    # same checkout key shouldnt make two orders
     conn.execute("""
         CREATE TABLE IF NOT EXISTS checkout_requests (
             customer_id INTEGER NOT NULL,
@@ -110,7 +109,7 @@ def retrieve_inventory():
     connection = get_db_connection()
     cursor = connection.cursor()
 
-    # SQL query joins the products table to the users table to get the producer name
+    # sql query joins the products table to the users table to get the producer name
     cursor.execute("""
         SELECT 
             p.*, 
@@ -129,7 +128,7 @@ def insert_inventory(data):
     connection = get_db_connection()
     cursor = connection.cursor()
 
-    # SQL insert statement for a new product record
+    # sql insert statement for a new product record
     cursor.execute("""
         INSERT INTO products (producer_id, product_name, price, stock_level, allergen_info, batch_number, product_image, harvest_date, product_description)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -152,11 +151,7 @@ def insert_inventory(data):
 
 
 def validate_allergen_declaration(value):
-    """Validate declared ingredients and possible contact without rewriting legacy records.
-
-    Contemporary UI uses: Contains: ... | May contain: ...
-    Older saved product descriptions remain editable without migration.
-    """
+    """check ingredients and possible contact; old records still work."""
     if not isinstance(value, str):
         raise ValueError("Provide an allergen declaration.")
     declaration = value.strip()
@@ -275,8 +270,8 @@ class NativeAPIHandler(SimpleHTTPRequestHandler):
                     connection.close()
             return
 
-        # Compatibility redirect: older cached navigation used /home.html.
-        # The actual homepage is frontend/index.html.
+        # compatibility redirect: older cached navigation used /home.html.
+        # the actual homepage is frontend/index.html.
         if urlsplit(self.path).path == "/home.html":
             self.send_response(302)
             self.send_header("Location", "/index.html")
@@ -378,7 +373,7 @@ class NativeAPIHandler(SimpleHTTPRequestHandler):
                 connection = get_db_connection()
                 cursor = connection.cursor()
 
-                # Profiles are private; clients may access only their own account.
+                # profiles are private; clients may access only their own account.
                 if self.authenticated_user(connection) != user_id:
                     connection.close()
                     self.send_json_result(403, {"message": "Not authorised to view this account."})
@@ -479,8 +474,13 @@ class NativeAPIHandler(SimpleHTTPRequestHandler):
                 connection = get_db_connection()
                 cursor = connection.cursor()
 
-                # A customer can only view their own order history.
-                if customer_from_request(connection, self.headers) != customer_id:
+                # sign in first, then check whose orders these are
+                viewer_id = customer_from_request(connection, self.headers)
+                if viewer_id is None:
+                    connection.close()
+                    self.send_json_result(401, {"message": "Sign in to view your orders."})
+                    return
+                if viewer_id != customer_id:
                     connection.close()
                     self.send_json_result(403, {"message": "Not authorised to view these orders."})
                     return
@@ -507,6 +507,8 @@ class NativeAPIHandler(SimpleHTTPRequestHandler):
                 self.send_header('Access-Control-Allow-Origin', '*')
                 self.end_headers()
                 self.wfile.write(json.dumps(orders).encode('utf-8'))
+            except ValueError:
+                self.send_json_result(400, {"message": "Enter a valid order reference."})
             except Exception as e:
                 print(f"ORDER HISTORY ERROR: {e}")
                 self.send_response(500)
@@ -557,7 +559,7 @@ class NativeAPIHandler(SimpleHTTPRequestHandler):
                 connection = get_db_connection()
                 cursor = connection.cursor()
 
-                # SQL insert statement to create the new user account
+                # sql insert statement to create the new user account
                 cursor.execute("""
                     INSERT INTO users (full_name, email, password_hash, role)
                     VALUES (?, ?, ?, ?)
@@ -624,8 +626,8 @@ class NativeAPIHandler(SimpleHTTPRequestHandler):
                 if user:
                     role = user["role"]
 
-                    # Producer accounts can also use the customer shopping node.
-                    # Customer accounts still cannot access producer-only actions.
+                    # producer accounts can also use the customer shopping node.
+                    # customer accounts still cannot access producer-only actions.
                     if requested_node not in ("customer", "producer") or (
                         requested_node == "producer" and role != "producer"
                     ):
@@ -739,7 +741,7 @@ class NativeAPIHandler(SimpleHTTPRequestHandler):
                 producer_id_raw = authenticated_producer_id
 
                 # casts each field to the correct type before inserting
-                # Producers can supply harvest dates, but cannot mark their
+                # producers can supply harvest dates, but cannot mark their
                 # own stock as safety-verified via the intake form.
                 harvest_date = (data.get("harvest_date") or "").strip() or None
                 if harvest_date:
@@ -815,8 +817,8 @@ class NativeAPIHandler(SimpleHTTPRequestHandler):
                 submitted_total = payload.get("total_price", 0.0)
                 delivery_method = payload.get("delivery_method", "hub")
 
-                # BEGIN IMMEDIATE serialises stock changes and order writes.
-                # Retries with the same key return the original order.
+                # lock stock changes while placing an order
+                # repeat keys return the first order
                 connection.execute("BEGIN IMMEDIATE")
                 if checkout_key:
                     recorded = connection.execute(
@@ -836,7 +838,7 @@ class NativeAPIHandler(SimpleHTTPRequestHandler):
                     self.send_json_result(400, {"message": "Invalid delivery method."})
                     return
 
-                # The same six illustrative node IDs used on drop-nodes.html.
+                # the same six illustrative node IDs used on drop-nodes.html.
                 valid_nodes = {
                     "ND-01": "Liverpool Hub", "ND-02": "Manchester Hub",
                     "ND-03": "Cardiff Hub", "ND-04": "Glasgow Hub",
@@ -886,7 +888,7 @@ class NativeAPIHandler(SimpleHTTPRequestHandler):
                         return
                     address_json = json.dumps(address, ensure_ascii=False)
 
-                # Validate stock using DB values and snapshot prices for reporting.
+                # validate stock using DB values and snapshot prices for reporting.
                 if not isinstance(cart_items, list) or not cart_items:
                     connection.rollback()
                     self.send_json_result(400, {"message": "Cart must contain products."})
@@ -928,8 +930,8 @@ class NativeAPIHandler(SimpleHTTPRequestHandler):
                         return
                     validated_items.append((product, quantity))
 
-                # Server-authoritative price calculation: £0 hub / £15 direct delivery.
-                # Compute from current database prices, not client-supplied totals.
+                # server-authoritative price calculation: £0 hub / £15 direct delivery.
+                # compute from current database prices, not client-supplied totals.
                 subtotal_pence = sum(
                     round(float(product["price"]) * 100) * quantity
                     for product, quantity in validated_items
@@ -1006,7 +1008,7 @@ class NativeAPIHandler(SimpleHTTPRequestHandler):
                 # always closes the connection even if an exception was raised
                 connection.close()
 
-        # GDPR consent logging endpoint
+        # gdpr consent logging endpoint
         elif self.path == '/consent':
             try:
                 content_length = int(self.headers.get('Content-Length', 0))
@@ -1190,13 +1192,13 @@ class NativeAPIHandler(SimpleHTTPRequestHandler):
                 if raw_password:
                     # converts the new password into a hash before updating the record
                     hashed_pw = hash_password(raw_password)
-                    # SQL update statement that includes the new password hash
+                    # sql update statement that includes the new password hash
                     cursor.execute(
                         "UPDATE users SET full_name=?, email=?, password_hash=? WHERE user_id=?",
                         (full_name, email, hashed_pw, user_id)
                     )
                 else:
-                    # SQL update that leaves the password hash unchanged
+                    # sql update that leaves the password hash unchanged
                     cursor.execute(
                         "UPDATE users SET full_name=?, email=? WHERE user_id=?",
                         (full_name, email, user_id)
@@ -1266,7 +1268,7 @@ class NativeAPIHandler(SimpleHTTPRequestHandler):
                     connection.close()
                     self.send_json_result(403, {"message": "Not authorised to delete this account."})
                     return
-                # Prevent orphaned order history; accounts with orders need review.
+                # prevent orphaned order history; accounts with orders need review.
                 owns_orders = connection.execute(
                     "SELECT 1 FROM orders WHERE customer_id = ? LIMIT 1", (user_id,)
                 ).fetchone()
@@ -1296,7 +1298,7 @@ class NativeAPIHandler(SimpleHTTPRequestHandler):
 
 
 if __name__ == "__main__":
-    # Local development server: do not expose sign-in and account APIs on the LAN.
+    # local development server: do not expose sign-in and account APIs on the LAN.
     server_address = ('127.0.0.1', PORT)
     httpd = HTTPServer(server_address, NativeAPIHandler)
     print(f"SYSTEM LOG: GLH // CO-OP Native API initialized at http://127.0.0.1:{PORT}")

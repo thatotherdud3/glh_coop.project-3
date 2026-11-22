@@ -222,6 +222,8 @@ class SecurityWorkflowTests(unittest.TestCase):
 
     def test_signed_session_and_order_history_require_matching_identity(self):
         self.assertEqual(self.send("GET", "/session")[0], 401)
+        self.assertEqual(self.send("GET", "/orders/1")[0], 401)
+        self.assertEqual(self.send("GET", "/orders/not-a-number")[0], 400)
         code, current_user, _ = self.send("GET", "/session", session_role="customer", user_id=1)
         self.assertEqual(code, 200)
         self.assertEqual(current_user["user_id"], 1)
