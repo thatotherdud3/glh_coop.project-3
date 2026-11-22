@@ -1,4 +1,4 @@
-"""Producer dashboard, private session tokens and order-line fulfilment."""
+"""producer stats, signed sessions and order fulfilment."""
 import hashlib
 import hmac
 import os
@@ -12,7 +12,7 @@ from zoneinfo import ZoneInfo
 
 
 def _load_token_signing_key():
-    """Use an environment secret or a private key persisted on this machine."""
+    """use an env secret or save one locally for next time."""
     configured = os.environ.get("GLH_SESSION_SECRET_HEX")
     if configured is not None:
         try:
@@ -32,7 +32,7 @@ def _load_token_signing_key():
     try:
         fd = os.open(filename, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
     except FileExistsError:
-        pass  # Reuse this key after restarts: previously issued sessions still verify.
+        pass  # keep the same key across restarts
     else:
         with os.fdopen(fd, "w", encoding="ascii") as secret_file:
             secret_file.write(secrets.token_hex(32) + "\n")
@@ -62,86 +62,60 @@ def issue_producer_token(user_id):
     return payload + "." + signature
 
 
+def _signed_user(connection, ticket, role):
+    # check the signature, expiry and account role
+    if not ticket:
+        return None
+    try:
+        payload, signature = ticket.strip().rsplit(".", 1)
+        user_id, expires = map(int, payload.split(":"))
+    except (TypeError, ValueError):
+        return None
+
+    expected = hmac.new(_TOKEN_KEY, payload.encode(), hashlib.sha256).hexdigest()
+    if user_id <= 0 or time.time() >= expires or not hmac.compare_digest(signature, expected):
+        return None
+
+    found = connection.execute(
+        "SELECT 1 FROM users WHERE user_id = ? AND role = ?",
+        (user_id, role),
+    ).fetchone()
+    return user_id if found else None
+
+
+def _cookies(headers):
+    # a bad cookie should never stop a valid one working
+    cookies = SimpleCookie()
+    try:
+        cookies.load(headers.get("Cookie", ""))
+    except Exception:
+        return SimpleCookie()
+    return cookies
+
+
 def producer_from_token(connection, header):
     if not header or not header.startswith("Bearer "):
         return None
-    try:
-        payload, signature = header[7:].strip().rsplit(".", 1)
-        producer_id, expires = map(int, payload.split(":"))
-    except (TypeError, ValueError):
-        return None
-    expected = hmac.new(_TOKEN_KEY, payload.encode(), hashlib.sha256).hexdigest()
-    if not hmac.compare_digest(signature, expected):
-        return None
-    if producer_id <= 0 or int(time.time()) >= expires:
-        return None
-    found = connection.execute(
-        "SELECT 1 FROM users WHERE user_id = ? AND role = 'producer'",
-        (producer_id,),
-    ).fetchone()
-    return producer_id if found else None
+    return _signed_user(connection, header[7:], "producer")
 
 
 def producer_from_request(connection, headers):
-    """Use the signed HttpOnly cookie, falling back to the existing bearer token."""
-    raw_cookie = headers.get("Cookie", "")
-    if raw_cookie:
-        cookies = SimpleCookie()
-        try:
-            cookies.load(raw_cookie)
-            ticket = cookies.get("glh_producer_session")
-            if ticket:
-                authenticated = producer_from_token(
-                    connection, "Bearer " + ticket.value
-                )
-                if authenticated is not None:
-                    return authenticated
-        except Exception:
-            # Malformed cookie values never authenticate a request.
-            pass
-    return producer_from_token(connection, headers.get("Authorization"))
-
+    # check the cookie first, then the old bearer token
+    cookie = _cookies(headers).get("glh_producer_session")
+    signed = _signed_user(connection, cookie.value, "producer") if cookie else None
+    return signed or producer_from_token(connection, headers.get("Authorization"))
 
 
 def customer_from_request(connection, headers):
-    """Authorise shopping for customers and signed-in producers alike.
-
-    Shopping always requires a signed, HttpOnly browser cookie. Reuse the
-    producer validator for producer shopping so dashboard and checkout cannot
-    disagree about whether the same producer session is valid.
-    """
-    raw_cookie = headers.get("Cookie", "")
-    if not raw_cookie:
-        return None
-    try:
-        cookies = SimpleCookie()
-        cookies.load(raw_cookie)
-    except (TypeError, ValueError):
-        return None
-
-    customer_cookie = cookies.get("glh_customer_session")
-    if customer_cookie:
-        try:
-            payload, signature = customer_cookie.value.rsplit(".", 1)
-            user_id, expires = map(int, payload.split(":"))
-            expected = hmac.new(_TOKEN_KEY, payload.encode(), hashlib.sha256).hexdigest()
-            if (
-                user_id > 0
-                and time.time() < expires
-                and hmac.compare_digest(signature, expected)
-                and connection.execute(
-                    "SELECT 1 FROM users WHERE user_id = ? AND role = 'customer'",
-                    (user_id,),
-                ).fetchone()
-            ):
+    # producers can shop too, but customers cant open producer tools
+    cookies = _cookies(headers)
+    for name, role in (("glh_customer_session", "customer"),
+                       ("glh_producer_session", "producer")):
+        cookie = cookies.get(name)
+        if cookie:
+            user_id = _signed_user(connection, cookie.value, role)
+            if user_id:
                 return user_id
-        except (TypeError, ValueError):
-            # A stale customer cookie must not shadow a valid producer cookie.
-            pass
-
-    producer_cookie = cookies.get("glh_producer_session")
-    if producer_cookie:
-        return producer_from_token(connection, "Bearer " + producer_cookie.value)
     return None
 
 
@@ -161,7 +135,7 @@ def ensure_producer_metrics_schema(connection):
         if name not in columns:
             connection.execute(f"ALTER TABLE order_items ADD COLUMN {name} {definition}")
     if "products" in tables:
-        # Backfill producer and product identity, without inventing sale prices.
+        # fill missing producer and product info, not sale prices
         connection.execute("""
             UPDATE order_items SET producer_id = (
                 SELECT producer_id FROM products p

@@ -193,6 +193,33 @@ class SecurityWorkflowTests(unittest.TestCase):
             **payload, "email": "short-password@glh.test", "password": "123"
         })[0], 400)
 
+    def test_invalid_cookies_cannot_change_roles_or_hide_valid_sessions(self):
+        from producer_metrics import issue_producer_token
+
+        customer = issue_producer_token(1)
+        producer = issue_producer_token(2)
+        bad = customer[:-1] + ("a" if customer[-1] != "a" else "b")
+
+        self.assertEqual(self.send(
+            "GET", "/session", cookie_header="glh_customer_session=" + bad
+        )[0], 401)
+        self.assertEqual(self.send(
+            "GET", "/producer/dashboard",
+            cookie_header="glh_producer_session=" + customer
+        )[0], 401)
+        self.assertEqual(self.send(
+            "GET", "/orders/2",
+            cookie_header="glh_customer_session=" + producer
+        )[0], 401)
+        status, user, _ = self.send(
+            "GET", "/session",
+            cookie_header="glh_customer_session=" + bad +
+                "; glh_producer_session=" + producer
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(user["role"], "producer")
+        self.assertEqual(user["user_id"], 2)
+
     def test_signed_session_and_order_history_require_matching_identity(self):
         self.assertEqual(self.send("GET", "/session")[0], 401)
         code, current_user, _ = self.send("GET", "/session", session_role="customer", user_id=1)
