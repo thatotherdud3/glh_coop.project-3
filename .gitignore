@@ -1,7 +1,7 @@
-# Generated locally. Never commit the key used to sign login sessions.
+# local key for signed sessions, keep it out of git
 .glh_session_key
 
-# Python bytecode and caches.
+# python cache files
 __pycache__/
 *.py[cod]
 
@@ -9,3 +9,6 @@ __pycache__/
 /glh_coop.db-wal
 /glh_coop.db-shm
 /glh_coop.db-journal
+
+# mac files dont belong in commits
+.DS_Store
