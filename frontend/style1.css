@@ -5,12 +5,12 @@
    03. page styles
    04. responsive architecture */
 
-/* Shared accent: consent form blue, used sitewide. */
+/* shared accent: consent form blue, used sitewide. */
 :root {
   --glh-accent: #0000ff;
 }
 
-/* Keep existing text-sage markup compatible while rendering it blue. */
+/* keep existing text-sage markup compatible while rendering it blue. */
 .text-sage {
   color: var(--glh-accent) !important;
 }
@@ -420,7 +420,7 @@ body:has(.menu-checkbox:checked) {
     color 0.2s;
 }
 
-/* Figma-style subtle light grey hover, also available for keyboard navigation */
+/* figma-style subtle light grey hover, also available for keyboard navigation */
 .portal-grid .grid-box:hover,
 .portal-grid .grid-box:focus-visible {
   background-color: #f1f1f1;
@@ -450,7 +450,7 @@ body:has(.menu-checkbox:checked) {
   font-size: 14px;
   opacity: 0.5;
 }
-/* Large editorial serif titles on the homepage, independent of product styling */
+/* large editorial serif titles on the homepage, independent of product styling */
 .portal-grid .grid-box .box-title {
   font-family: Didot, "Bodoni MT", Georgia, serif;
   font-weight: normal;
@@ -461,7 +461,7 @@ body:has(.menu-checkbox:checked) {
   overflow-wrap: break-word;
 }
 
-/* Change the title to italic on hover and keyboard focus */
+/* change the title to italic on hover and keyboard focus */
 .portal-grid .grid-box:hover .box-title,
 .portal-grid .grid-box:focus-visible .box-title {
   font-style: italic;
@@ -778,7 +778,10 @@ body:has(.menu-checkbox:checked) {
   height: 100%;
   object-fit: cover;
   display: block;
-  filter: none;
+  filter: none !important;
+  -webkit-filter: none !important;
+  mix-blend-mode: normal;
+  opacity: 1;
 }
 
 .recipe-info {
@@ -872,7 +875,7 @@ body:has(.menu-checkbox:checked) {
   margin-top: 24px;
 }
 
-/* Responsive Overrides */
+/* responsive Overrides */
 
 /* authentication terminal page */
 
@@ -1928,7 +1931,7 @@ body:has(.menu-checkbox:checked) {
 
 /* mobile font size overrides */
 @media (max-width: 600px) {
-  /* Keep the wordmark separate from stacked mobile account actions. */
+  /* keep the wordmark separate from stacked mobile account actions. */
   .global-nav {
     grid-template-columns: 32px minmax(0, 1fr) max-content;
     column-gap: 10px;
@@ -1994,7 +1997,7 @@ body:has(.menu-checkbox:checked) {
   }
 }
 
-/* In-page feedback shared by the cart and producer terminal. */
+/* in-page feedback shared by the cart and producer terminal. */
 .glh-inline-notice{margin:16px 0;padding:16px 18px;border-left:3px solid #111;background:#eeeeea;color:#222;font:600 13px/1.65 Helvetica,Arial,sans-serif;overflow-wrap:anywhere}
 .glh-inline-notice[data-kind="error"]{border-left-color:#ad2323;background:#f9eded;color:#912020}
 .glh-inline-notice[data-kind="success"]{border-left-color:#007e63;background:#edf6f1;color:#195d47}
@@ -2018,7 +2021,7 @@ body:has(.menu-checkbox:checked) {
 .ledger-item-actions .ledger-remove-btn{height:auto;min-height:45px;padding:12px;font-size:12px;letter-spacing:1px}
 @media(max-width:600px){.ledger-edit-form{padding:20px 16px}.ledger-edit-grid{grid-template-columns:1fr;gap:20px}.ledger-edit-grid .ledger-edit-wide{grid-column:1}.ledger-edit-actions{flex-direction:column}.ledger-edit-actions>*{width:100%}}
 
-/* Cookie consent: equally available optional rejection and later preference changes. */
+/* cookie consent: equally available optional rejection and later preference changes. */
 @media (min-width: 601px) {
   .intercept-actions { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
   .intercept-actions .system-btn { padding-left: 8px; padding-right: 8px; }
@@ -2047,7 +2050,7 @@ body:has(.menu-checkbox:checked) {
 .glh-flash-notice{max-width:740px;margin:24px auto;padding:16px 22px;}
 @media(max-width:600px){.system-table .order-history-empty{padding:44px 18px;}.glh-flash-notice{margin:16px;}}
 
-/* Consistent copyright attribution on every page, including pages without
+/* consistent copyright attribution on every page, including pages without
    the full editorial footer. */
 .site-copyright {
   margin: 56px 0 0;
@@ -2074,7 +2077,7 @@ body:has(.menu-checkbox:checked) {
   .site-legal-footer .site-copyright { margin-top: 0; }
 }
 
-/* Declared ingredient allergens and possible contact are independent details. */
+/* declared ingredient allergens and possible contact are independent details. */
 .producer-access-note{margin:18px 0 28px;max-width:440px;color:#555;font:700 12px/1.8 Helvetica,Arial,sans-serif;letter-spacing:.07em}
 .allergen-declaration-details{display:flex;flex-direction:column;gap:12px;margin-top:35px;padding-top:28px;border-top:1px solid #bbb}
 .allergen-declaration-details label{font:700 12px/1.5 Helvetica,Arial,sans-serif;letter-spacing:.08em}

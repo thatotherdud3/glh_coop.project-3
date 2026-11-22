@@ -2,10 +2,19 @@
 
 /* cart state management */
 
-// loads the cart from local storage or starts with an empty array
-let cart = JSON.parse(localStorage.getItem("glh_cart")) || [];
+// load a valid saved cart, otherwise start fresh
+let cart = [];
+try {
+  const saved = JSON.parse(localStorage.getItem("glh_cart") || "[]");
+  if (Array.isArray(saved)) {
+    cart = saved.filter(item => item && Number.isInteger(Number(item.product_id))
+      && Number.isInteger(Number(item.quantity)) && Number(item.quantity) > 0);
+  }
+} catch {
+  // bad saved data shouldnt break the whole site
+}
 
-// Encode user-supplied or database-supplied text before adding it to HTML templates.
+// encode user-supplied or database-supplied text before adding it to HTML templates.
 function escapeHtml(value) {
   return String(value ?? "").replace(/[&<>"']/g, (char) => ({
     "&": "&amp;", "<": "&lt;", ">": "&gt;",
@@ -46,12 +55,10 @@ function saveCart() {
 }
 
 function updateCartCount() {
-  // finds the cart link in the nav and updates the number in brackets
-  const counts = document.querySelectorAll(".nav-item");
-  counts.forEach((el) => {
-    if (el.innerText.includes("CART")) {
-      el.innerText = `CART [${cart.reduce((sum, item) => sum + item.quantity, 0)}]`;
-    }
+  // count once, then update any cart links
+  const count = cart.reduce((sum, item) => sum + Number(item.quantity), 0);
+  document.querySelectorAll(".nav-item").forEach(link => {
+    if (link.textContent.includes("CART")) link.textContent = `CART [${count}]`;
   });
 }
 
@@ -64,7 +71,7 @@ function addToCart(id, name, price, stock, requestedQuantity = 1, productMetadat
   const existing = cart.find((item) => Number(item.product_id) === Number(id));
   const alreadyInCart = existing ? Number(existing.quantity) || 0 : 0;
   if (alreadyInCart + quantity > available) return false;
-  // Keep the exact produce image, producer and trace data with the cart item.
+  // keep the exact produce image, producer and trace data with the cart item.
   const metadata = {
     product_name: name,
     price: Number(price),
@@ -138,21 +145,14 @@ function showInventoryError(url) {
     const sort = document.getElementById("shop-sort");
     if (search) search.disabled = true;
     if (sort) sort.disabled = true;
-    shopGrid.replaceChildren();
-    const section = document.createElement("section");
-    section.className = "shop-inventory-error";
-    section.setAttribute("role", "alert");
-    const title = document.createElement("h2");
-    title.textContent = "Inventory temporarily unavailable.";
-    const info = document.createElement("p");
-    info.textContent = "We could not load the latest produce. Your cart is still saved.";
-    const button = document.createElement("button");
-    button.className = "shop-inventory-retry";
-    button.type = "button";
-    button.textContent = "TRY AGAIN";
-    button.addEventListener("click", () => fetchInventoryData(url));
-    section.append(title, info, button);
-    shopGrid.appendChild(section);
+    shopGrid.innerHTML = `
+      <section class="shop-inventory-error" role="alert">
+        <h2>Inventory temporarily unavailable.</h2>
+        <p>We could not load the latest produce. Your cart is still saved.</p>
+        <button class="shop-inventory-retry" type="button">TRY AGAIN</button>
+      </section>`;
+    shopGrid.querySelector(".shop-inventory-retry")
+      .addEventListener("click", () => fetchInventoryData(url));
     const counter = document.getElementById("shop-search-count");
     if (counter) counter.textContent = "INVENTORY UNAVAILABLE";
   }
@@ -178,10 +178,8 @@ function buildAllergenDeclaration(ingredientAllergens, possibleContact = "") {
 }
 
 function fetchInventoryData(url) {
-  // appends a timestamp to the URL to prevent the browser from caching the response
-  const cacheBustUrl = `${url}?t=${new Date().getTime()}`;
-
-  fetch(cacheBustUrl, { cache: "no-store" })
+  // fresh stock every time
+  fetch(`${url}?t=${Date.now()}`, { cache: "no-store" })
     .then((response) => {
       if (!response.ok)
         throw new Error("Network latency or server rejection detected.");
@@ -225,7 +223,7 @@ function distributeData(inventory) {
 
 /* shop produce node */
 
-// Correct image extensions used by older database seed versions.
+// correct image extensions used by older database seed versions.
 const LEGACY_PRODUCT_IMAGE_NAMES = Object.freeze({
   "basil.png": "basil.jpg",
   "tarragon.png": "tarragon.jpeg",
@@ -234,7 +232,7 @@ const LEGACY_PRODUCT_IMAGE_NAMES = Object.freeze({
 });
 
 function resolveProductImageUrl(imageName) {
-  // Paths are relative to the frontend page; always use the assets directory.
+  // paths are relative to the frontend page; always use the assets directory.
   const supplied = String(imageName || "placeholder.png").trim();
   const basename = supplied.split(/[\\/]/).pop() || "placeholder.png";
   const filename = LEGACY_PRODUCT_IMAGE_NAMES[basename.toLowerCase()] || basename;
@@ -244,12 +242,12 @@ function resolveProductImageUrl(imageName) {
 function populateShop(inventory, container) {
   container.innerHTML = "";
 
-  // Shop search and sorting provide the display order.
+  // shop search and sorting provide the display order.
   inventory.forEach((item) => {
     const card = document.createElement("div");
     card.className = "product-card";
 
-    // Resolve legacy .png filenames and safely encode spaces for the browser.
+    // resolve legacy .png filenames and safely encode spaces for the browser.
     const imagePath = resolveProductImageUrl(item.product_image);
 
     // works out the stock status for the badge and button text
@@ -269,8 +267,8 @@ function populateShop(inventory, container) {
     }
 
     // formats the allergen info and price for display
-    let formattedAllergens = `ALLERGEN DECLARATION: ${escapeHtml(String(item.allergen_info || "NOT RECORDED").toUpperCase())}`;
-    let formattedPrice = `£${parseFloat(item.price).toFixed(2)}`;
+    const formattedAllergens = `ALLERGEN DECLARATION: ${escapeHtml(String(item.allergen_info || "NOT RECORDED").toUpperCase())}`;
+    const formattedPrice = `£${Number(item.price).toFixed(2)}`;
 
     card.innerHTML = `
         <div class="product-image-slot" style="width: 100%; aspect-ratio: 4 / 3; overflow: hidden; border-bottom: 1px solid #111111;">
@@ -301,7 +299,7 @@ function populateShop(inventory, container) {
         </button>
     `;
 
-    // Let customers choose a quantity on the shop card before adding to cart.
+    // let customers choose a quantity on the shop card before adding to cart.
     const stock = Math.max(0, Math.floor(Number(item.stock_level) || 0));
     const actionButton = card.querySelector(".product-action");
     const quantityRow = document.createElement("div");
@@ -683,7 +681,7 @@ if (authFormObj) {
           throw new Error(data.message || "Registration failed. Please try again.");
         }
 
-        // Registration does not sign in the new customer. End any previous
+        // registration does not sign in the new customer. End any previous
         // account's cookie session before routing to the login screen.
         try {
           await fetch("/producer/logout", {
@@ -696,7 +694,7 @@ if (authFormObj) {
           "session_user_id", "session_role", "session_full_name",
           "session_producer_token"
         ]) localStorage.removeItem(key);
-        // Preserve the guest shopping cart for checkout after sign-in.
+        // preserve the guest shopping cart for checkout after sign-in.
         window.location.replace("customer-login.html?registered=1");
       } catch (error) {
         console.error("REGISTRATION ERROR:", error);
@@ -762,7 +760,7 @@ async function initSessionUI() {
   const customerPage = page === "customer-portal.html";
   let user = null;
 
-  // Cookies, not browser storage, determine the authenticated identity.
+  // cookies, not browser storage, determine the authenticated identity.
   try {
     const response = await fetch("/session", {
       credentials: "same-origin", cache: "no-store"
@@ -802,7 +800,7 @@ async function initSessionUI() {
     return false;
   }
 
-  // Send authenticated members to their existing portal, not back to login.
+  // send authenticated members to their existing portal, not back to login.
   const nodeLinks = document.querySelectorAll(".menu-link");
   nodeLinks.forEach((link) => {
     const target = link.getAttribute("href");
@@ -860,8 +858,8 @@ async function initSessionUI() {
 }
 
 async function logout(confirmation = "") {
-  // Clear the HttpOnly session cookie server-side before navigating away.
-  // The frontend also clears its existing local session state.
+  // clear the HttpOnly session cookie server-side before navigating away.
+  // the frontend also clears its existing local session state.
   try {
     await fetch("/producer/logout", {
       method: "POST",
@@ -902,7 +900,7 @@ const COOKIE_CONSENT_KEY = "glh_cookie_consent_v1";
 
 function initConsentWall() {
   let overlay = document.getElementById("consent-intercept");
-  // The homepage contains the editorial consent markup. Other entry pages
+  // the homepage contains the editorial consent markup. Other entry pages
   // receive the same popup so first-time visitors see it before opting in.
   if (!overlay) {
     overlay = document.createElement("div");
@@ -944,7 +942,7 @@ function initConsentWall() {
       </div>`;
     document.body.prepend(overlay);
   }
-  // Allow preferences to be revised from the footer on any storefront page.
+  // allow preferences to be revised from the footer on any storefront page.
   const footer = document.querySelector(".massive-footer .footer-content");
   if (footer && !document.getElementById("cookie-preferences-btn")) {
     const button = document.createElement("button");
@@ -986,7 +984,7 @@ function submitConsent(analytics, marketing) {
     Math.random().toString(36).slice(2, 11).toUpperCase();
   const choice = { analytics: Boolean(analytics), marketing: Boolean(marketing),
     recorded_at: new Date().toISOString(), token };
-  // Store the actual choice, not just a dismissal flag; keep it across logout.
+  // store the actual choice, not just a dismissal flag; keep it across logout.
   localStorage.setItem(COOKIE_CONSENT_KEY, JSON.stringify(choice));
   const overlay = document.getElementById("consent-intercept");
   if (overlay) overlay.style.display = "none";
@@ -997,7 +995,7 @@ function submitConsent(analytics, marketing) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ token, analytics: choice.analytics, marketing: choice.marketing })
   }).then(readApiResponse).catch((error) => {
-    // The site remains usable offline; a local preference is not a server record.
+    // the site remains usable offline; a local preference is not a server record.
     console.warn("Consent preference was saved locally but not recorded by the API:", error);
   });
 }
@@ -1137,7 +1135,7 @@ function calculateCartTotals() {
   };
 }
 
-// Existing carts may pre-date the image metadata. Refresh it from the live
+// existing carts may pre-date the image metadata. Refresh it from the live
 // inventory API so cart pictures and Shop Produce use identical source files.
 async function refreshCartProductMetadata() {
   if (!cart.length) return;
@@ -1170,23 +1168,13 @@ function renderCartPage() {
   if (!container) return;
   container.replaceChildren();
   if (cart.length === 0) {
-    const empty = document.createElement("section");
-    empty.className = "cart-empty-state";
-    const kicker = document.createElement("span");
-    kicker.className = "cart-empty-kicker";
-    kicker.textContent = "SOURCING LEDGER";
-    const title = document.createElement("h2");
-    title.className = "cart-empty-title";
-    title.textContent = "Nothing in the basket. Yet.";
-    const copy = document.createElement("p");
-    copy.className = "cart-empty-copy";
-    copy.textContent = "Discover fresh produce from the cooperative and build your first order.";
-    const action = document.createElement("a");
-    action.className = "cart-empty-action";
-    action.href = "products.html";
-    action.textContent = "EXPLORE PRODUCE";
-    empty.append(kicker, title, copy, action);
-    container.appendChild(empty);
+    container.innerHTML = `
+      <section class="cart-empty-state">
+        <span class="cart-empty-kicker">SOURCING LEDGER</span>
+        <h2 class="cart-empty-title">Nothing in the basket. Yet.</h2>
+        <p class="cart-empty-copy">Discover fresh produce from the cooperative and build your first order.</p>
+        <a class="cart-empty-action" href="products.html">EXPLORE PRODUCE</a>
+      </section>`;
     updateOrderSummary();
     return;
   }
@@ -1374,8 +1362,8 @@ function getOrCreateCheckoutKey() {
 }
 
 async function verifyCartAgainstInventory() {
-  // Inspect the latest live stock and prices before asking the server to write.
-  // The API repeats these checks under a SQLite transaction.
+  // inspect the latest live stock and prices before asking the server to write.
+  // the API repeats these checks under a SQLite transaction.
   const response = await fetch("/products?t=" + Date.now(), {
     cache: "no-store", credentials: "same-origin"
   });
@@ -1427,8 +1415,8 @@ async function recoverCompletedCheckout() {
   if (response.status === 404) return false;
   const result = await readApiResponse(response);
   if (result.status !== "success" || !result.order_id) return false;
-  // The first request completed even if its browser response was lost.
-  // Do not submit a second order; open the original confirmation instead.
+  // the first request completed even if its browser response was lost.
+  // do not submit a second order; open the original confirmation instead.
   cart = [];
   invalidateCheckoutAttempt();
   saveCart();
@@ -1469,7 +1457,7 @@ async function initiateCheckout() {
   }
   showSystemFeedback("cart-feedback", "");
   try {
-    // Recover any successfully recorded prior attempt before examining stock.
+    // recover any successfully recorded prior attempt before examining stock.
     // A completed first attempt will have reduced available inventory.
     if (await recoverCompletedCheckout()) return;
     const issue = await verifyCartAgainstInventory();
@@ -1606,7 +1594,7 @@ function loadOrderHistory(authenticatedCustomerId) {
 
 
 async function initCustomerPortal() {
-  // Use the signed HttpOnly cookie as the single source of identity.
+  // use the signed HttpOnly cookie as the single source of identity.
   // A different browser's old localStorage value must never select an account.
   const status = document.getElementById("order-history-body");
   if (!status) return;
@@ -1646,7 +1634,7 @@ async function initCustomerPortal() {
 /* single DOMContentLoaded entry point */
 
 document.addEventListener("DOMContentLoaded", async () => {
-  // Verify a signed server session before rendering protected portal data.
+  // verify a signed server session before rendering protected portal data.
   if (!(await initSessionUI())) return;
   updateCartCount();
   const flash = sessionStorage.getItem("glh_flash_notice");
@@ -1677,10 +1665,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     renderCartPage();
     refreshCartProductMetadata();
 
-    // Show the relevant collection or home-delivery form.
+    // show the relevant collection or home-delivery form.
     initCartDeliverySelection();
 
-    // Check whether a prior submission succeeded despite a lost response,
+    // check whether a prior submission succeeded despite a lost response,
     // including after the customer reloads the cart.
     if (localStorage.getItem("glh_checkout_key")) {
       checkoutInFlight = true;

@@ -25,3 +25,5 @@ jobs:
           node --check frontend/app.js
           node --check frontend/order-confirmation.js
           node --check frontend/producer-metrics.js
+          node --check frontend/batch-trace.js
+          node tests/test_frontend.js
