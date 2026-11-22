@@ -53,7 +53,7 @@ def main():
                         (image, rows[0][0]),
                     )
                 print(f"{batch}: {old_filename or '(empty)'} -> {image}")
-            # The transaction commits only if all four batches were found.
+            # only save if all four batches exist
     except (sqlite3.Error, ValueError) as error:
         print(f"Image sync failed: {error}", file=sys.stderr)
         return 1

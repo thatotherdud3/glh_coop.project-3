@@ -28,7 +28,7 @@ python3 api_app/api_app.py
 
 Open **http://127.0.0.1:8000/index.html**.
 
-**Important:** `seed_products.py` deletes and recreates `glh_coop.db`. Never run it to update an existing database. The active SQLite database, its journals and the local session signing key are excluded from Git. Back up `glh_coop.db` before changing or resetting data.
+**Important:** `seed_products.py` deletes and recreates `glh_coop.db`. Never run it to update an existing database. The older `qa_provisioning.py` script also deletes the database, and `database_app/database_app.py` creates an older schema. Use `seed_products.py` only for a fresh clone. The active database, its journals and the local session signing key are excluded from Git. Back up `glh_coop.db` before changing or resetting data.
 
 ## Demo accounts
 

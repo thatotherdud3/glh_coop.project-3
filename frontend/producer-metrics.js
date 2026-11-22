@@ -1,4 +1,4 @@
-/* Producer metrics and fulfilment queue. Values are loaded from the API. */
+/* producer stats and orders from the api */
 (function () {
   "use strict";
   const origin = window.location.port === "8000"
@@ -21,8 +21,8 @@
   async function request(path, options) {
     const token = localStorage.getItem("session_producer_token");
     const headers = token ? { Authorization: "Bearer " + token } : {};
-    // Requests to the local GLH API include the HttpOnly producer cookie.
-    // Missing localStorage tokens no longer force a redirect before the API call.
+    // requests use the signed session cookie
+    // dont redirect just because old storage is empty
     const response = await fetch(origin + path, {
       ...options,
       cache: "no-store",
@@ -122,7 +122,7 @@
     if (refresh) refresh.addEventListener("click", refreshProducerDashboard);
     refreshProducerDashboard();
   }
-  // Also initialise if this script runs after DOMContentLoaded.
+  // set up even if the page already loaded
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", initialiseMetrics, { once: true });
   } else {

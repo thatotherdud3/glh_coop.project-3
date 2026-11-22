@@ -1,4 +1,4 @@
-/* Real batch lookup: all displayed values come from the API. */
+/* real batch info comes from the api */
 document.addEventListener("DOMContentLoaded", function () {
   const form = document.getElementById("batch-lookup-form");
   if (!form) return;

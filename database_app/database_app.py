@@ -1,11 +1,11 @@
 import sqlite3
 
 def setup_database():
-    # Connect to the database (creates the file if it doesn't exist)
+    # opens the db, makes a new one if missing
     connection = sqlite3.connect("glh_coop.db")
     cursor = connection.cursor()
 
-    # 1. USERS TABLE
+    # users table
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS users (
         user_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -16,7 +16,7 @@ def setup_database():
     )
     """)
 
-    # 2. FARMS TABLE
+    # farms table
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS farms (
         farm_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -28,7 +28,7 @@ def setup_database():
     )
     """)
 
-    # 3. PRODUCTS TABLE
+    # products table
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS products (
         product_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -45,7 +45,7 @@ def setup_database():
     )
     """)
 
-    # 4. ORDERS TABLE
+    # orders table
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS orders (
         order_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -60,7 +60,7 @@ def setup_database():
     )
     """)
 
-    # 5. ORDER_ITEMS TABLE
+    # order items table
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS order_items (
         item_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -77,19 +77,19 @@ def setup_database():
     """)
 
     # --- INJECT SEED DATA FOR TESTING ---
-    # Adding a test producer
+    # add a sample producer
     cursor.execute("""
     INSERT OR IGNORE INTO users (user_id, full_name, email, password_hash, role) 
     VALUES (1, 'John Oakhaven', 'producer@glh.com', 'hashed_pass_123', 'producer')
     """)
 
-    # Adding a test farm for the producer
+    # add a sample farm
     cursor.execute("""
     INSERT OR IGNORE INTO farms (farm_id, user_id, farm_name, hygiene_rating, farm_story) 
     VALUES (1, 1, 'Oakhaven Farms', 5, 'Local organic farm dedicated to community health.')
     """)
 
-    # Adding some test products
+    # add some sample produce
     baseline_stock = [
         (1, 1, "Heirloom Carrots", 4.50, 450, "None", "BATCH-2026-A1"),
         (2, 1, "Swiss Chard", 3.00, 120, "None", "BATCH-2026-A2"),
@@ -102,7 +102,7 @@ def setup_database():
     VALUES (?, ?, ?, ?, ?, ?, ?)
     """, baseline_stock)
 
-    # Save and close
+    # save and close
     connection.commit()
     connection.close()
     print("Database built successfully. All 5 tables match the GLH Proposal ERD.")

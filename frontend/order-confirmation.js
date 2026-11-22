@@ -1,4 +1,4 @@
-/* Private, server-backed order confirmation. No payment is charged here. */
+/* private order receipt, no payment taken */
 (function () {
   "use strict";
   const byId = (id) => document.getElementById(id);

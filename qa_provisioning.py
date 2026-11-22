@@ -7,7 +7,7 @@ DB_PATH = "glh_coop.db"
 def rebuild_master_ledger():
     print("SYSTEM LOG: Commencing Master Re-Initialization...")
 
-    # Step 1: Purge existing ledger for a clean slate
+    # deletes the db, so only use for a fresh demo
     if os.path.exists(DB_PATH):
         os.remove(DB_PATH)
         print("SYSTEM LOG: Legacy database purged.")
@@ -15,7 +15,7 @@ def rebuild_master_ledger():
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
 
-    # --- IDENTITY & ACCESS SCHEMA ---
+    # users table
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS users (
             user_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -27,7 +27,7 @@ def rebuild_master_ledger():
         )
     ''')
 
-    # --- INVENTORY SCHEMA ---
+    # produce table
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS products (
             product_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -59,8 +59,8 @@ def rebuild_master_ledger():
         cursor.execute("INSERT INTO users (full_name, email, password_hash, role) VALUES (?, ?, ?, ?)",
                        (name, email, h_pw, role))
 
-    # --- DATA PAYLOAD: BASELINE INVENTORY ---
-    # Bound to Producer ID 1 (Original Test Producer)
+    # starter produce
+    # sample stock belongs to demo producer 1
     baseline_inventory = [
         (1, "Heirloom Carrots", 4.50, 450, "No Allergens Present", "BATCH-2026-A1", "placeholder.png"),
         (1, "Swiss Chard", 3.00, 120, "No Allergens Present", "BATCH-2026-A2", "placeholder.png"),
