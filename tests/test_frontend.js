@@ -8,7 +8,7 @@ const source = fs.readFileSync("frontend/app.js", "utf8");
 function run(saved) {
   const context = vm.createContext({
     localStorage: { getItem: () => saved, setItem() {}, removeItem() {} },
-    document: { getElementById: () => null, addEventListener() {} },
+    document: { getElementById: () => null, querySelector: () => null, addEventListener() {} },
     console
   });
   vm.runInContext(source, context);
